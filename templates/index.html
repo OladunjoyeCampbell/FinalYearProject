@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome{% endblock %}
+
+{% block content %}
+<div class="container py-5 text-center">
+  <img src="{{ url_for('static', filename='logo.png') }}" alt="Niger State Polytechnic Logo" style="max-height: 100px;" class="mb-4">
+
+  <h2 class="text-uppercase fw-bold">Niger State Polytechnic, Zungeru</h2>
+  <h4 class="mb-4">Department of Computer Science</h4>
+
+  <h1 class="mb-4">Final Year Project Topic Submission Portal</h1>
+
+  {% if session.logged_in %}
+    <p class="lead">Hello, {{ session.student_name }}!</p>
+    <div class="d-grid gap-3 col-lg-6 col-md-8 col-12 mx-auto">
+      <a href="{{ url_for('submit_topic') }}" class="btn btn-primary btn-lg">Submit a Topic</a>
+      <a href="{{ url_for('view_topics') }}" class="btn btn-secondary btn-lg">View Available Topics</a>
+      <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-lg">Logout</a>
+    </div>
+  {% else %}
+    <div class="d-grid gap-3 col-lg-6 col-md-8 col-12 mx-auto">
+      <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg">Student Login</a>
+      <a href="{{ url_for('register') }}" class="btn btn-outline-primary btn-lg">Register as Student</a>
+      <a href="{{ url_for('view_topics') }}" class="btn btn-secondary btn-lg">View Available Topics</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

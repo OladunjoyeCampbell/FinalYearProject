@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Available Topics{% endblock %}
+
+{% block content %}
+
+<div class="container py-4">
+    <h2 class="mb-4 text-center">Available Final Year Project Topics</h2>
+    
+    {% if programme %}
+        <!-- Logged in user sees only their programme's topics -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                {{ programme }} Topics
+            </div>
+            <div class="card-body">
+                {% if topics %}
+                    <ul class="list-group">
+                        {% for t in topics %}
+                            <li class="list-group-item">{{ t }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="alert alert-info">No available topics found for your programme.</div>
+                {% endif %}
+            </div>
+        </div>
+    {% else %}
+        <!-- Non-logged in users see all programmes' topics -->
+        <ul class="nav nav-tabs mb-4" id="topicTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="hnd-swd-tab" data-bs-toggle="tab" 
+                    data-bs-target="#hnd-swd" type="button" role="tab" 
+                    aria-controls="hnd-swd" aria-selected="true">
+                    HND Software & Web Development
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="hnd-ncc-tab" data-bs-toggle="tab" 
+                    data-bs-target="#hnd-ncc" type="button" role="tab" 
+                    aria-controls="hnd-ncc" aria-selected="false">
+                    HND Networking & Cloud Computing
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="nd-cs-tab" data-bs-toggle="tab" 
+                    data-bs-target="#nd-cs" type="button" role="tab" 
+                    aria-controls="nd-cs" aria-selected="false">
+                    ND Computer Science
+                </button>
+            </li>
+        </ul>
+        
+        <div class="tab-content" id="topicTabsContent">
+            <!-- HND Software & Web Development Topics -->
+            <div class="tab-pane fade show active" id="hnd-swd" role="tabpanel" 
+                aria-labelledby="hnd-swd-tab">
+                {% if topics["HND Software & Web Development"] %}
+                    <ul class="list-group">
+                        {% for t in topics["HND Software & Web Development"] %}
+                            <li class="list-group-item">{{ t }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="alert alert-info">No available topics found for HND Software & Web Development.</div>
+                {% endif %}
+            </div>
+            
+            <!-- HND Networking & Cloud Computing Topics -->
+            <div class="tab-pane fade" id="hnd-ncc" role="tabpanel" 
+                aria-labelledby="hnd-ncc-tab">
+                {% if topics["HND Networking & Cloud Computing"] %}
+                    <ul class="list-group">
+                        {% for t in topics["HND Networking & Cloud Computing"] %}
+                            <li class="list-group-item">{{ t }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="alert alert-info">No available topics found for HND Networking & Cloud Computing.</div>
+                {% endif %}
+            </div>
+            
+            <!-- ND Computer Science Topics -->
+            <div class="tab-pane fade" id="nd-cs" role="tabpanel" 
+                aria-labelledby="nd-cs-tab">
+                {% if topics["ND Computer Science"] %}
+                    <ul class="list-group">
+                        {% for t in topics["ND Computer Science"] %}
+                            <li class="list-group-item">{{ t }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="alert alert-info">No available topics found for ND Computer Science.</div>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+    
+    <div class="text-center d-grid gap-2 mt-4">
+        {% if session.logged_in %}
+            <a href="{{ url_for('submit_topic') }}" class="btn btn-primary btn-lg">Submit a Topic</a>
+        {% else %}
+            <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg">Login to Submit a Topic</a>
+        {% endif %}
+        <a href="{{ url_for('home') }}" class="btn btn-outline-secondary btn-lg">Back to Home</a>
+    </div>
+</div>
+
+{% endblock %}

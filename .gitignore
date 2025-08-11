@@ -1,0 +1,38 @@
+# Python bytecode and cache
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+.Python
+
+# Environment variables and credentials
+.env
+.env.*
+!.env.template
+credentials.json
+
+# Flask instance and cache
+instance/
+.webassets-cache
+
+# Logs and debug files
+*.log
+
+# Editor and IDE settings
+.vscode/
+.idea/
+*~
+*.swp
+
+# OS-specific files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Registered Topics{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <h2 class="mb-4 text-center">Registered Final Year Project Topics</h2>
+
+  <ul class="nav nav-tabs mb-4" id="registrationTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="hnd-swd-tab" data-bs-toggle="tab" 
+              data-bs-target="#hnd-swd" type="button" role="tab" 
+              aria-controls="hnd-swd" aria-selected="true">
+        HND Software & Web Development
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="hnd-ncc-tab" data-bs-toggle="tab" 
+              data-bs-target="#hnd-ncc" type="button" role="tab" 
+              aria-controls="hnd-ncc" aria-selected="false">
+        HND Networking & Cloud Computing
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="nd-cs-tab" data-bs-toggle="tab" 
+              data-bs-target="#nd-cs" type="button" role="tab" 
+              aria-controls="nd-cs" aria-selected="false">
+        ND Computer Science
+      </button>
+    </li>
+  </ul>
+
+  <div class="tab-content" id="registrationTabsContent">
+    <!-- HND Software & Web Development -->
+    <div class="tab-pane fade show active" id="hnd-swd" role="tabpanel" aria-labelledby="hnd-swd-tab">
+      {% set records = registrations["HND Software & Web Development"] %}
+      {% if records %}
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Student Name</th>
+                <th>Matric Number</th>
+                <th>Topic Title</th>
+                <th>Supervisor</th>
+                <th>Submission Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in records %}
+              <tr>
+                <td>{{ r.student_name }}</td>
+                <td>{{ r.matric_number }}</td>
+                <td>{{ r.topic_title }}</td>
+                <td>{{ r.supervisor }}</td>
+                <td>{{ r.submission_date }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="alert alert-info">No registrations yet for HND Software & Web Development.</div>
+      {% endif %}
+    </div>
+
+    <!-- HND Networking & Cloud Computing -->
+    <div class="tab-pane fade" id="hnd-ncc" role="tabpanel" aria-labelledby="hnd-ncc-tab">
+      {% set records = registrations["HND Networking & Cloud Computing"] %}
+      {% if records %}
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Student Name</th>
+                <th>Matric Number</th>
+                <th>Topic Title</th>
+                <th>Supervisor</th>
+                <th>Submission Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in records %}
+              <tr>
+                <td>{{ r.student_name }}</td>
+                <td>{{ r.matric_number }}</td>
+                <td>{{ r.topic_title }}</td>
+                <td>{{ r.supervisor }}</td>
+                <td>{{ r.submission_date }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="alert alert-info">No registrations yet for HND Networking & Cloud Computing.</div>
+      {% endif %}
+    </div>
+
+    <!-- ND Computer Science -->
+    <div class="tab-pane fade" id="nd-cs" role="tabpanel" aria-labelledby="nd-cs-tab">
+      {% set records = registrations["ND Computer Science"] %}
+      {% if records %}
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Student Name</th>
+                <th>Matric Number</th>
+                <th>Topic Title</th>
+                <th>Supervisor</th>
+                <th>Submission Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in records %}
+              <tr>
+                <td>{{ r.student_name }}</td>
+                <td>{{ r.matric_number }}</td>
+                <td>{{ r.topic_title }}</td>
+                <td>{{ r.supervisor }}</td>
+                <td>{{ r.submission_date }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="alert alert-info">No registrations yet for ND Computer Science.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="text-center d-grid gap-2 mt-4">
+    <a href="{{ url_for('submit_topic') }}" class="btn btn-primary btn-lg">Submit a Topic</a>
+    <a href="{{ url_for('home') }}" class="btn btn-outline-secondary btn-lg">Back to Home</a>
+  </div>
+</div>
+{% endblock %}
+
+
+

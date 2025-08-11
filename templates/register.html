@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Student Registration{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card shadow">
+        <div class="card-body p-4">
+          <h3 class="text-center mb-4">Student Registration</h3>
+
+          {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for cat, msg in messages %}
+              <div class="alert alert-{{ cat }} alert-dismissible fade show" role="alert">
+                {{ msg }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endwith %}
+
+          <form method="POST">
+            <div class="mb-3">
+              <label class="form-label">Full Name</label>
+              <input type="text" name="full_name" class="form-control form-control-lg" required>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Matric Number</label>
+              <input type="text" name="matric_number" class="form-control form-control-lg" required>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Programme</label>
+              <select name="programme" class="form-select form-select-lg" required>
+                <option value="">-- Select Programme --</option>
+                {% for p in programmes %}<option>{{ p }}</option>{% endfor %}
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Email Address</label>
+              <input type="email" name="email" class="form-control form-control-lg" required>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Password</label>
+              <input type="password" name="password" class="form-control form-control-lg" required>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Confirm Password</label>
+              <input type="password" name="confirm_password" class="form-control form-control-lg" required>
+            </div>
+
+            <div class="d-grid">
+              <button type="submit" class="btn btn-success btn-lg">Register</button>
+            </div>
+          </form>
+
+          <div class="mt-3 text-center">
+            <a href="{{ url_for('login') }}">Already registered? Login here</a>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
