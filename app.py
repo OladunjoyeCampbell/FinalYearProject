@@ -316,6 +316,7 @@ def coordinator_login():
     if request.method == 'POST':
         ph       = request.form.get('passphrase', '').strip()
         coord_ph = get_coordinator_passphrase()
+        app.logger.info(f"COORDINATOR LOGIN ATTEMPT — entered='{ph}' stored='{coord_ph}' match={ph == coord_ph}")
         if not ph:
             flash('Please enter a passphrase.', 'danger')
         elif coord_ph and ph == coord_ph:
@@ -324,6 +325,8 @@ def coordinator_login():
             app.logger.info("LOGIN: coordinator role assigned via /coordinator-login")
             flash('Welcome, Project Coordinator.', 'success')
             return redirect(url_for('view_registered'))
+        elif not coord_ph:
+            flash('COORDINATOR_PASSPHRASE is not set on the server. Contact admin.', 'danger')
         else:
             app.logger.warning("COORDINATOR LOGIN FAILED")
             flash('Invalid coordinator passphrase.', 'danger')
@@ -1238,7 +1241,7 @@ def admin_assign_supervisors():
                         'programme':    s.get('Programme',''),
                         'supervisor':   sup_name,
                     })
-            ok_n, err_n = bulk_assign_supervisors(
+            ok_n, err_n, errors = bulk_assign_supervisors(
                 assignments_to_make, 'Project Coordinator'
             )
             flash(
