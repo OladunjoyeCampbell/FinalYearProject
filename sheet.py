@@ -174,12 +174,16 @@ def get_credentials():
             info, scopes=SCOPES
         )
 
-    # 2. Try Render Secret File (recommended — avoids paste/formatting issues)
-    secret_file = "/etc/secrets/credentials.json"
-    if os.path.isfile(secret_file):
-        return service_account.Credentials.from_service_account_file(
-            secret_file, scopes=SCOPES
-        )
+    # 2. Try Render Secret File — filename in dashboard: credentials.json
+    #    Render places it at /etc/secrets/<filename>
+    for secret_path in [
+        "/etc/secrets/credentials.json",   # Render secret file
+        "/run/secrets/credentials.json",   # alternative Render path
+    ]:
+        if os.path.isfile(secret_path):
+            return service_account.Credentials.from_service_account_file(
+                secret_path, scopes=SCOPES
+            )
 
     # 3. Try local credentials.json (development only)
     local_file = os.path.join(os.getcwd(), "credentials.json")
@@ -191,9 +195,10 @@ def get_credentials():
     raise EnvironmentError(
         "No Google credentials found. Options:\n"
         "  1. Render env var: set GOOGLE_CREDENTIALS_JSON to minified JSON\n"
-        "  2. Render Secret File: add file at /etc/secrets/credentials.json\n"
+        "  2. Render Secret File: filename = credentials.json (Render places it at /etc/secrets/)\n"
         "  3. Local dev: place credentials.json in the project root"
     )
+
 
 
 
