@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block title %}Presentation List — {{ current_session }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+  <!-- ── Page header ── -->
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+      <h4 class="mb-0">
+        🖨️ Presentation Eligibility List
+        <span class="badge bg-secondary ms-2">{{ total }} student{{ 's' if total != 1 }}</span>
+      </h4>
+      <small class="text-muted">Session: <strong>{{ current_session }}</strong>
+        &nbsp;·&nbsp; Generated: {{ generated_at }}
+      </small>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      {% if is_coordinator %}
+      <a href="{{ url_for('admin_manage_presentations') }}" class="btn btn-sm btn-success">
+        🎓 Manage Presentations
+      </a>
+      {% endif %}
+      <a href="{{ url_for('supervisor_clear_student_route') }}" class="btn btn-sm btn-outline-success">
+        ✅ Clear Students
+      </a>
+      <a href="{{ url_for('view_registered') }}" class="btn btn-sm btn-outline-secondary">
+        ← Back
+      </a>
+      <button onclick="window.print()" class="btn btn-sm btn-dark">
+        🖨️ Print
+      </button>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="alert alert-{{ cat }} py-2 alert-dismissible fade show">
+        {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- ── Status filter tabs ── -->
+  <ul class="nav nav-tabs mb-3" role="tablist">
+    <li class="nav-item">
+      <a class="nav-link {% if status_filter == 'eligible' %}active{% endif %}"
+         href="{{ url_for('admin_presentation_list', status='eligible', programme=programme_filter) }}">
+        ✅ Eligible
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if status_filter == 'cleared' %}active{% endif %}"
+         href="{{ url_for('admin_presentation_list', status='cleared', programme=programme_filter) }}">
+        🟦 Cleared
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if status_filter == 'paid' %}active{% endif %}"
+         href="{{ url_for('admin_presentation_list', status='paid', programme=programme_filter) }}">
+        💰 Paid
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if status_filter == 'uncleared' %}active{% endif %}"
+         href="{{ url_for('admin_presentation_list', status='uncleared', programme=programme_filter) }}">
+        ⏳ Uncleared
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if status_filter == 'unpaid' %}active{% endif %}"
+         href="{{ url_for('admin_presentation_list', status='unpaid', programme=programme_filter) }}">
+        ❌ Unpaid
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if status_filter == 'all' %}active{% endif %}"
+         href="{{ url_for('admin_presentation_list', status='all', programme=programme_filter) }}">
+        🗃 All
+      </a>
+    </li>
+  </ul>
+
+  <!-- ── Programme filter pills ── -->
+  <div class="mb-3 d-flex flex-wrap gap-2 align-items-center">
+    <small class="text-muted me-1">Filter by cohort:</small>
+    <a href="{{ url_for('admin_presentation_list', status=status_filter, programme='') }}"
+       class="btn btn-sm {% if not programme_filter %}btn-dark{% else %}btn-outline-secondary{% endif %}">
+      All Cohorts
+    </a>
+    {% for prog in programmes %}
+    <a href="{{ url_for('admin_presentation_list', status=status_filter, programme=prog) }}"
+       class="btn btn-sm {% if programme_filter == prog %}btn-dark{% else %}btn-outline-secondary{% endif %}">
+      {{ prog }}
+    </a>
+    {% endfor %}
+  </div>
+
+  <!-- ── No data notice ── -->
+  {% if total == 0 %}
+  <div class="alert alert-info">
+    No students match the selected filter for <strong>{{ current_session }}</strong>.
+  </div>
+  {% endif %}
+
+  <!-- ── Tables per programme ── -->
+  {% set sn = namespace(value=0) %}
+  {% for prog in programmes %}
+    {% set rows = grouped[prog] %}
+    {% if rows %}
+    <div class="card mb-4 shadow-sm">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>{{ prog }}</strong>
+        <span class="badge bg-success">{{ rows|length }} student{{ 's' if rows|length != 1 }}</span>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-striped table-hover table-sm mb-0 align-middle">
+            <thead class="table-dark">
+              <tr>
+                <th style="width:4%">#</th>
+                <th style="width:20%">Student Name</th>
+                <th style="width:13%">Matric No.</th>
+                <th>Project Topic</th>
+                <th style="width:15%">Supervisor</th>
+                <th style="width:10%">Cleared?</th>
+                <th style="width:10%">Paid?</th>
+                <th style="width:10%">Eligible?</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in rows %}
+              {% set sn.value = sn.value + 1 %}
+              {% set cleared = r.get('Supervisor Cleared','') | lower == 'yes' %}
+              {% set paid    = r.get('Payment Status','') | lower == 'paid' %}
+              {% set eligible = cleared and paid %}
+              <tr class="{% if eligible %}table-success{% elif cleared %}table-info{% elif paid %}table-warning{% endif %}">
+                <td>{{ sn.value }}</td>
+                <td><strong>{{ r.get('Student Name','') }}</strong></td>
+                <td><code>{{ r.get('Matric Number','') }}</code></td>
+                <td class="small">
+                  {% set topic = r.get('Topic Title','') %}
+                  {{ topic[:70] }}{% if topic|length > 70 %}…{% endif %}
+                </td>
+                <td class="small">{{ r.get('Supervisor','') }}</td>
+
+                <!-- Cleared -->
+                <td>
+                  {% if cleared %}
+                    <span class="badge bg-success">✓ Yes</span>
+                    {% if r.get('Cleared By') %}
+                    <div class="small text-muted">{{ r['Cleared By'] }}</div>
+                    {% endif %}
+                    {% if r.get('Cleared Date') %}
+                    <div class="small text-muted">{{ r['Cleared Date'][:10] }}</div>
+                    {% endif %}
+                  {% else %}
+                    <span class="badge bg-secondary">No</span>
+                  {% endif %}
+                </td>
+
+                <!-- Paid -->
+                <td>
+                  {% if paid %}
+                    <span class="badge bg-success">✓ Paid</span>
+                    {% if r.get('Payment Amount') %}
+                    <div class="small text-muted">₦{{ r['Payment Amount'] }}</div>
+                    {% endif %}
+                    {% if r.get('Payment Date') %}
+                    <div class="small text-muted">{{ r['Payment Date'][:10] }}</div>
+                    {% endif %}
+                  {% else %}
+                    <span class="badge bg-warning text-dark">Unpaid</span>
+                  {% endif %}
+                </td>
+
+                <!-- Eligible -->
+                <td class="text-center">
+                  {% if eligible %}
+                    <span class="badge bg-success fs-6">✅</span>
+                  {% else %}
+                    <span class="badge bg-danger">✗</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  {% endfor %}
+
+</div>
+
+<!-- ── Print styles ── -->
+<style>
+  @media print {
+    .btn, .nav, .d-flex.flex-wrap.gap-2.mb-3 { display: none !important; }
+    .card { border: 1px solid #ccc !important; box-shadow: none !important; }
+    .table-success { background-color: #d1e7dd !important; -webkit-print-color-adjust: exact; }
+    .table-info    { background-color: #cff4fc !important; -webkit-print-color-adjust: exact; }
+    .table-warning { background-color: #fff3cd !important; -webkit-print-color-adjust: exact; }
+  }
+</style>
+{% endblock %}
