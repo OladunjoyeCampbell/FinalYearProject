@@ -146,14 +146,41 @@ _log_sheet        = None
 _students_sheet   = None
 
 
+#def get_credentials():
+#    creds_json = os.getenv(CREDENTIALS_ENV_VAR)
+#    if creds_json:
+#        info = json.loads(creds_json)
+#       return service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
+#  creds_file = os.path.join(os.getcwd(), "credentials.json")
+#    if os.path.isfile(creds_file):
+#        return service_account.Credentials.from_service_account_file(creds_file, scopes=SCOPES)
+#    raise EnvironmentError(
+#        f"No Google credentials found. Set {CREDENTIALS_ENV_VAR} or provide credentials.json"
+#    )
+
 def get_credentials():
     creds_json = os.getenv(CREDENTIALS_ENV_VAR)
+
     if creds_json:
         info = json.loads(creds_json)
-        return service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
+
+        # 🔴 CRITICAL FIX: restore private key formatting for JWT signing
+        if "private_key" in info:
+            info["private_key"] = info["private_key"].replace("\\n", "\n")
+
+        return service_account.Credentials.from_service_account_info(
+            info,
+            scopes=SCOPES
+        )
+
     creds_file = os.path.join(os.getcwd(), "credentials.json")
+
     if os.path.isfile(creds_file):
-        return service_account.Credentials.from_service_account_file(creds_file, scopes=SCOPES)
+        return service_account.Credentials.from_service_account_file(
+            creds_file,
+            scopes=SCOPES
+        )
+
     raise EnvironmentError(
         f"No Google credentials found. Set {CREDENTIALS_ENV_VAR} or provide credentials.json"
     )
