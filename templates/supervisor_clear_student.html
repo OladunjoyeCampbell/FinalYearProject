@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+{% block title %}Clear Students for Presentation{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+      <h4 class="mb-0">✅ Clear Students for Presentation</h4>
+      <small class="text-muted">Session: <strong>{{ current_session }}</strong></small>
+    </div>
+    <div class="d-flex gap-2">
+      {% if is_coordinator %}
+      <a href="{{ url_for('admin_manage_presentations') }}" class="btn btn-sm btn-success">
+        🎓 Manage Presentations
+      </a>
+      <a href="{{ url_for('admin_presentation_list') }}" class="btn btn-sm btn-outline-dark">
+        🖨️ Print List
+      </a>
+      {% endif %}
+      <a href="{{ url_for('view_registered') }}" class="btn btn-sm btn-outline-secondary">← Back</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="alert alert-{{ cat }} py-2 alert-dismissible fade show">
+        {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- ── Instructions ── -->
+  <div class="alert alert-info py-2">
+    {% if is_coordinator %}
+      As <strong>Project Coordinator</strong> you can clear students on behalf of
+      absent supervisors, and mark payment directly on this page.
+      Current presentation fee: <strong>₦{{ "{:,}".format(presentation_fee) }}</strong>.
+    {% else %}
+      Enter your name below, then click <strong>✓ Clear</strong> next to each student
+      whose topic you have reviewed and approved. Only <strong>cleared AND paid</strong>
+      students appear on the official presentation list.
+    {% endif %}
+  </div>
+
+  <!-- ── Your name (persisted via hidden field on every form) ── -->
+  <div class="card shadow-sm mb-3">
+    <div class="card-body py-2">
+      <form method="GET" action="" class="d-flex gap-3 align-items-center flex-wrap">
+        <label class="mb-0 fw-bold text-nowrap">Your Name:</label>
+        <input type="text" name="name" id="supervisorName"
+               class="form-control form-control-sm"
+               value="{{ default_name }}"
+               placeholder="Type your name before clearing students"
+               style="max-width:320px">
+        <button type="submit" class="btn btn-sm btn-primary">Set Name</button>
+        {% if default_name %}
+          <span class="badge bg-success">Signed in as: {{ default_name }}</span>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+
+  {% set my_name = default_name %}
+
+  {% if not my_name and not is_coordinator %}
+  <div class="alert alert-warning">
+    ⚠️ Please enter your name above before clearing any student.
+  </div>
+  {% endif %}
+
+<!-- ── Summary counts ── -->
+{% set total = students|length %}
+{% set stats = namespace(cleared=0, paid=0, eligible=0) %}
+
+{% for s in students %}
+  {% set matric = s.get('Matric Number', '').strip().lower() %}
+  {% set rec = pres_records.get(matric, {}) %}
+
+  {% if rec.get('Supervisor Cleared', '') == 'Yes' %}
+    {% set stats.cleared = stats.cleared + 1 %}
+  {% endif %}
+
+  {% if rec.get('Payment Status', '') == 'Paid' %}
+    {% set stats.paid = stats.paid + 1 %}
+  {% endif %}
+
+  {% if rec.get('Supervisor Cleared', '') == 'Yes'
+        and rec.get('Payment Status', '') == 'Paid' %}
+    {% set stats.eligible = stats.eligible + 1 %}
+  {% endif %}
+{% endfor %}
+
+<div class="row g-2 mb-3">
+  <div class="col-6 col-md-3">
+    <div class="card text-center border-secondary py-2">
+      <h4 class="mb-0">{{ total }}</h4><small>Total Students</small>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-3">
+    <div class="card text-center border-info py-2">
+      <h4 class="mb-0 text-info">{{ stats.cleared }}</h4><small>Cleared</small>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-3">
+    <div class="card text-center border-warning py-2">
+      <h4 class="mb-0 text-warning">{{ stats.paid }}</h4><small>Paid</small>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-3">
+    <div class="card text-center border-success py-2">
+      <h4 class="mb-0 text-success">{{ stats.eligible }}</h4><small>✅ Eligible</small>
+    </div>
+  </div>
+</div>
+
+  <!-- ── Student table grouped by programme ── -->
+  {% for prog in ['HND Software & Web Development',
+                  'HND Networking & Cloud Computing',
+                  'ND Computer Science'] %}
+    {% set prog_students = students | selectattr('Programme','equalto',prog) | list %}
+    {% if prog_students %}
+    <div class="card shadow-sm mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>{{ prog }}</strong>
+        <span class="badge bg-secondary">{{ prog_students|length }}</span>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm table-striped table-hover mb-0 align-middle">
+            <thead class="table-dark">
+              <tr>
+                <th>#</th>
+                <th>Student Name</th>
+                <th>Matric No.</th>
+                <th>Topic</th>
+                <th>Supervisor</th>
+                <th>Cleared?</th>
+                <th>Paid?</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in prog_students %}
+              {% set mkey = s['Matric Number'].strip().lower() %}
+              {% set pr = pres_records.get(mkey, {}) %}
+              {% set cleared = pr.get('Supervisor Cleared','No') == 'Yes' %}
+              {% set paid    = pr.get('Payment Status','Unpaid') == 'Paid' %}
+              <tr class="{% if cleared and paid %}table-success
+                         {% elif cleared %}table-info
+                         {% elif paid %}table-warning{% endif %}">
+                <td>{{ loop.index }}</td>
+                <td><strong>{{ s['Student Name'] }}</strong></td>
+                <td><code>{{ s['Matric Number'] }}</code></td>
+                <td class="small">
+                  {{ s['Topic Title'][:60] }}{% if s['Topic Title']|length > 60 %}…{% endif %}
+                </td>
+                <td class="small">{{ s['Supervisor'] }}</td>
+
+                <!-- Cleared status -->
+                <td>
+                  {% if cleared %}
+                    <span class="badge bg-success">✓ Yes</span>
+                    <div class="small text-muted">{{ pr.get('Cleared By','') }}</div>
+                    <div class="small text-muted">
+                      {% if pr.get('Cleared Date') %}
+                        {{ pr['Cleared Date'][:10] }}
+                      {% endif %}
+                    </div>
+                  {% else %}
+                    <span class="badge bg-secondary">No</span>
+                  {% endif %}
+                </td>
+
+                <!-- Paid status -->
+                <td>
+                  {% if paid %}
+                    <span class="badge bg-success">✓ Paid</span>
+                    {% if pr.get('Payment Amount') %}
+                    <div class="small text-muted">₦{{ pr['Payment Amount'] }}</div>
+                    {% endif %}
+                    {% if pr.get('Payment Date') %}
+                    <div class="small text-muted">{{ pr['Payment Date'][:10] }}</div>
+                    {% endif %}
+                  {% else %}
+                    <span class="badge bg-warning text-dark">Unpaid</span>
+                  {% endif %}
+                </td>
+
+                <!-- Action buttons -->
+                <td>
+                  <div class="d-flex flex-column gap-1">
+
+                    {# ── Clear / Undo Clear ── #}
+                    {% if not cleared %}
+                      <form method="POST">
+                        <input type="hidden" name="action" value="clear">
+                        <input type="hidden" name="matric" value="{{ s['Matric Number'] }}">
+                        <input type="hidden" name="cleared_by"
+                               value="{% if is_coordinator %}Project Coordinator{% else %}{{ my_name }}{% endif %}">
+                        <input type="hidden" name="cleared_by_name" value="{{ my_name }}">
+                        <button type="submit"
+                                class="btn btn-sm btn-success py-0 px-2 w-100"
+                                {% if not my_name and not is_coordinator %}
+                                  disabled title="Set your name first"
+                                {% endif %}>
+                          ✓ Clear
+                        </button>
+                      </form>
+                    {% else %}
+                      {% if is_coordinator %}
+                      <form method="POST">
+                        <input type="hidden" name="action" value="unclear">
+                        <input type="hidden" name="matric" value="{{ s['Matric Number'] }}">
+                        <input type="hidden" name="cleared_by_name" value="{{ my_name }}">
+                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2 w-100">
+                          ✗ Undo Clear
+                        </button>
+                      </form>
+                      {% else %}
+                        <span class="text-success small">✓ Cleared</span>
+                      {% endif %}
+                    {% endif %}
+
+                    {# ── Pay / Undo Pay — coordinator only ── #}
+                    {% if is_coordinator %}
+                      {% if not paid %}
+                      <form method="POST">
+                        <input type="hidden" name="action" value="pay">
+                        <input type="hidden" name="matric" value="{{ s['Matric Number'] }}">
+                        <input type="hidden" name="cleared_by_name" value="{{ my_name }}">
+                        <button type="submit" class="btn btn-sm btn-warning py-0 px-2 w-100">
+                          💰 Mark Paid ₦{{ "{:,}".format(presentation_fee) }}
+                        </button>
+                      </form>
+                      {% else %}
+                      <form method="POST">
+                        <input type="hidden" name="action" value="unpay">
+                        <input type="hidden" name="matric" value="{{ s['Matric Number'] }}">
+                        <input type="hidden" name="cleared_by_name" value="{{ my_name }}">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary py-0 px-2 w-100">
+                          ✗ Reverse Pay
+                        </button>
+                      </form>
+                      {% endif %}
+                    {% endif %}
+
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  {% endfor %}
+
+  {% if not students %}
+  <div class="alert alert-info">
+    No students registered for <strong>{{ current_session }}</strong> yet.
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

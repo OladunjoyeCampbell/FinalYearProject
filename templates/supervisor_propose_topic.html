@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Propose a Topic{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>💡 Propose a Topic or Topic Change</h4>
+    <a href="{{ url_for('view_registered') }}" class="btn btn-sm btn-outline-secondary">← Back</a>
+  </div>
+
+  <div class="alert alert-info">
+    Use this form to suggest a <strong>new topic</strong> for the available pool, or a
+    <strong>topic change</strong> for a specific student. Your proposal will be reviewed
+    by the Project Committee/Coordinator before taking effect.
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="alert alert-{{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-dark text-white"><strong>Submit a Proposal</strong></div>
+    <div class="card-body">
+      <form method="POST">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Your Name <span class="text-danger">*</span></label>
+            <input type="text" name="proposer_name" class="form-control"
+                   placeholder="e.g. Dr Usman Bello" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Proposal Type <span class="text-danger">*</span></label>
+            <select name="proposal_type" class="form-select" onchange="toggleStudent(this)" required>
+              <option value="">— select —</option>
+              <option value="New Topic">New Topic (add to available pool)</option>
+              <option value="Topic Change">Topic Change (for a specific student)</option>
+            </select>
+          </div>
+
+          <div class="col-md-6" id="progRow">
+            <label class="form-label">Programme (for New Topic)</label>
+            <select name="programme" class="form-select">
+              <option value="">— select if New Topic —</option>
+              {% for p in programmes %}
+              <option value="{{ p }}">{{ p }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="col-md-6" id="studentRow" style="display:none">
+            <label class="form-label">Student (for Topic Change)</label>
+            <select name="student_matric" class="form-select">
+              <option value="">— select student —</option>
+              {% for s in students %}
+              <option value="{{ s['Matric Number'] }}">
+                {{ s['Student Name'] }} — {{ s['Matric Number'] }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label">Proposed Topic <span class="text-danger">*</span></label>
+            <textarea name="new_topic" class="form-control" rows="3"
+                      placeholder="Write the full topic title here — be descriptive" required></textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Note / Reason (optional)</label>
+            <textarea name="note" class="form-control" rows="2"
+                      placeholder="Why are you proposing this?"></textarea>
+          </div>
+        </div>
+        <div class="mt-3">
+          <button type="submit" class="btn btn-primary">Submit Proposal</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {% if is_coordinator and pending %}
+  <div class="card border-warning shadow-sm">
+    <div class="card-header bg-warning text-dark">
+      <strong>Pending Proposals ({{ pending|length }})</strong> — review these below or visit
+      <a href="{{ url_for('admin_review_proposals') }}">the full review page</a>.
+    </div>
+  </div>
+  {% endif %}
+</div>
+<script>
+function toggleStudent(sel) {
+  const isChange = sel.value === 'Topic Change';
+  document.getElementById('studentRow').style.display = isChange ? '' : 'none';
+  document.getElementById('progRow').style.display    = isChange ? 'none' : '';
+}
+</script>
+{% endblock %}

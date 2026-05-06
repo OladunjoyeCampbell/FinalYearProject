@@ -2,7 +2,7 @@
   -----------------------------------------------------------------------------
   Department of Computer Science, Niger State Polytechnic
   Author:         Dr Oladele Campbell
-  Copyright (c) 2025 Department of Computer Science, Niger State Polytechnic.
+  Copyright (c) 2026 Department of Computer Science, Niger State Polytechnic.
   All rights reserved.
   -----------------------------------------------------------------------------
 -->
@@ -26,24 +26,60 @@
               aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
+
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ms-auto">
 
-          {# ------------------ Supervisor (staff) links ------------------ #}
-          {% if session.role == 'staff' %}
+          {# ── Project Coordinator ───────────────────────────────────────── #}
+          {% if session.get('role') == 'coordinator' %}
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('view_registered') }}">
-                View Registered Topics
-              </a>
+              <a class="nav-link" href="{{ url_for('view_registered') }}">Registered Topics</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('staff_logout') }}">
-                Supervisor Logout
-              </a>
+              <a class="nav-link" href="{{ url_for('admin_edit_student') }}">Edit Student</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('admin_assign_supervisors') }}">👥 Assign Supervisors</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('admin_update_session') }}">Fix Sessions</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('admin_backfill_dates') }}">📅 Fill Dates</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('admin_review_proposals') }}">Proposals</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('admin_manage_presentations') }}">🎓 Presentations</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('admin_settings') }}">⚙️ Settings</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('staff_logout') }}">Logout (Coordinator)</a>
             </li>
 
-          {# ------------------ Student links ------------------ #}
-          {% elif session.logged_in %}
+          {# ── Supervisor ────────────────────────────────────────────────── #}
+          {% elif session.get('role') == 'supervisor' %}
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('view_registered') }}">Registered Topics</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('supervisor_propose_topic') }}">Propose Topic</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('supervisor_clear_student_route') }}">✅ Clear Students</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('admin_presentation_list') }}">🖨️ Pres. List</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('staff_logout') }}">Logout (Supervisor)</a>
+            </li>
+
+          {# ── Student ───────────────────────────────────────────────────── #}
+          {% elif session.get('logged_in') %}
             <li class="nav-item">
               <a class="nav-link" href="{{ url_for('submit_topic') }}">Submit Topic</a>
             </li>
@@ -54,7 +90,7 @@
               <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
             </li>
 
-          {# ------------------ Guest links ------------------ #}
+          {# ── Guest (not logged in) — original links + coordinator login ── #}
           {% else %}
             <li class="nav-item">
               <a class="nav-link" href="{{ url_for('login') }}">Student Login</a>
@@ -71,6 +107,9 @@
             <li class="nav-item">
               <a class="nav-link" href="{{ url_for('staff_login') }}">Supervisor Login</a>
             </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('coordinator_login') }}">Coordinator Login</a>
+            </li>
           {% endif %}
 
         </ul>
@@ -85,7 +124,7 @@
   <footer role="contentinfo" class="site-footer mt-5 pt-3 border-top">
     <div class="container text-center">
       <p class="text-muted mb-0" style="font-size: .85rem;">
-        © {{ current_year }} Department of Computer Science, Niger State Polytechnic.
+        &copy; {{ current_year }} Department of Computer Science, Niger State Polytechnic.
         Authored by Dr Oladele Campbell. All rights reserved.
       </p>
     </div>

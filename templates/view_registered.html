@@ -1,141 +1,197 @@
 {% extends "base.html" %}
-{% block title %}Registered Topics{% endblock %}
+{% block title %}Registered Topics — {{ current_session }}{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-  <h2 class="mb-4 text-center">Registered Final Year Project Topics</h2>
+<div class="container mt-4">
 
-  <ul class="nav nav-tabs mb-4" id="registrationTabs" role="tablist">
-    <li class="nav-item" role="presentation">
-      <button class="nav-link active" id="hnd-swd-tab" data-bs-toggle="tab" 
-              data-bs-target="#hnd-swd" type="button" role="tab" 
-              aria-controls="hnd-swd" aria-selected="true">
-        HND Software & Web Development
-      </button>
+  <!-- ── Page header ──────────────────────────────────────────────────────── -->
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+      <h4 class="mb-0">
+        Final Year Registered Topics
+        <span class="badge bg-secondary ms-2">{{ total }} student{{ 's' if total != 1 }}</span>
+      </h4>
+      <small class="text-muted">
+        Logged in as:
+        <strong>{% if is_coordinator %}Project Coordinator{% else %}Supervisor{% endif %}</strong>
+      </small>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+      <!-- Coordinator-only admin buttons -->
+      {% if is_coordinator %}
+      <a href="{{ url_for('admin_edit_student') }}" class="btn btn-sm btn-primary">
+        ✏️ Edit Student
+      </a>
+      <a href="{{ url_for('admin_update_session') }}" class="btn btn-sm btn-warning">
+        🔧 Fix Sessions
+      </a>
+      <a href="{{ url_for('admin_review_proposals') }}" class="btn btn-sm btn-info text-white">
+        📋 Proposals
+      </a>
+      <a href="{{ url_for('admin_manage_presentations') }}" class="btn btn-sm btn-success">
+        🎓 Presentations
+      </a>
+      <a href="{{ url_for('admin_backfill_sessions') }}" class="btn btn-sm btn-outline-secondary">
+        ↻ Rebuild
+      </a>
+      <a href="{{ url_for('admin_backfill_dates') }}" class="btn btn-sm btn-outline-secondary">
+        📅 Fill Dates
+      </a>
+      {% endif %}
+
+      <!-- Visible to both roles -->
+      <a href="{{ url_for('supervisor_propose_topic') }}" class="btn btn-sm btn-outline-primary">
+        💡 Propose Topic
+      </a>
+      <a href="{{ url_for('supervisor_clear_student_route') }}" class="btn btn-sm btn-outline-success">
+        ✅ Clear Students
+      </a>
+      <a href="{{ url_for('admin_presentation_list') }}" class="btn btn-sm btn-outline-dark">
+        🖨️ Pres. List
+      </a>
+      <a href="{{ url_for('staff_logout') }}" class="btn btn-sm btn-outline-danger">
+        Logout
+      </a>
+    </div>
+  </div>
+
+  <!-- ── Session / view tabs — visible to ALL staff ───────────────────────── -->
+  <ul class="nav nav-tabs mb-3" role="tablist">
+    <li class="nav-item">
+      <a class="nav-link {% if view_mode == 'current' %}active{% endif %}"
+         href="{{ url_for('view_registered', view='current', programme=filter_prog) }}">
+        📋 This Session
+        <span class="badge bg-primary ms-1">{{ current_session }}</span>
+      </a>
     </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link" id="hnd-ncc-tab" data-bs-toggle="tab" 
-              data-bs-target="#hnd-ncc" type="button" role="tab" 
-              aria-controls="hnd-ncc" aria-selected="false">
-        HND Networking & Cloud Computing
-      </button>
+    <li class="nav-item">
+      <a class="nav-link {% if view_mode == 'past' %}active{% endif %}"
+         href="{{ url_for('view_registered', view='past', programme=filter_prog) }}">
+        🗂 Past Sessions
+      </a>
     </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link" id="nd-cs-tab" data-bs-toggle="tab" 
-              data-bs-target="#nd-cs" type="button" role="tab" 
-              aria-controls="nd-cs" aria-selected="false">
-        ND Computer Science
-      </button>
+    <li class="nav-item">
+      <a class="nav-link {% if view_mode == 'all' %}active{% endif %}"
+         href="{{ url_for('view_registered', view='all', programme=filter_prog) }}">
+        🗃 All Sessions
+      </a>
     </li>
   </ul>
 
-  <div class="tab-content" id="registrationTabsContent">
-    <!-- HND Software & Web Development -->
-    <div class="tab-pane fade show active" id="hnd-swd" role="tabpanel" aria-labelledby="hnd-swd-tab">
-      {% set records = registrations["HND Software & Web Development"] %}
-      {% if records %}
-        <div class="table-responsive">
-          <table class="table table-striped">
-            <thead>
-              <tr>
-                <th>Student Name</th>
-                <th>Matric Number</th>
-                <th>Topic Title</th>
-                <th>Supervisor</th>
-                <th>Submission Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for r in records %}
-              <tr>
-                <td>{{ r.student_name }}</td>
-                <td>{{ r.matric_number }}</td>
-                <td>{{ r.topic_title }}</td>
-                <td>{{ r.supervisor }}</td>
-                <td>{{ r.submission_date }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      {% else %}
-        <div class="alert alert-info">No registrations yet for HND Software & Web Development.</div>
-      {% endif %}
-    </div>
-
-    <!-- HND Networking & Cloud Computing -->
-    <div class="tab-pane fade" id="hnd-ncc" role="tabpanel" aria-labelledby="hnd-ncc-tab">
-      {% set records = registrations["HND Networking & Cloud Computing"] %}
-      {% if records %}
-        <div class="table-responsive">
-          <table class="table table-striped">
-            <thead>
-              <tr>
-                <th>Student Name</th>
-                <th>Matric Number</th>
-                <th>Topic Title</th>
-                <th>Supervisor</th>
-                <th>Submission Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for r in records %}
-              <tr>
-                <td>{{ r.student_name }}</td>
-                <td>{{ r.matric_number }}</td>
-                <td>{{ r.topic_title }}</td>
-                <td>{{ r.supervisor }}</td>
-                <td>{{ r.submission_date }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      {% else %}
-        <div class="alert alert-info">No registrations yet for HND Networking & Cloud Computing.</div>
-      {% endif %}
-    </div>
-
-    <!-- ND Computer Science -->
-    <div class="tab-pane fade" id="nd-cs" role="tabpanel" aria-labelledby="nd-cs-tab">
-      {% set records = registrations["ND Computer Science"] %}
-      {% if records %}
-        <div class="table-responsive">
-          <table class="table table-striped">
-            <thead>
-              <tr>
-                <th>Student Name</th>
-                <th>Matric Number</th>
-                <th>Topic Title</th>
-                <th>Supervisor</th>
-                <th>Submission Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for r in records %}
-              <tr>
-                <td>{{ r.student_name }}</td>
-                <td>{{ r.matric_number }}</td>
-                <td>{{ r.topic_title }}</td>
-                <td>{{ r.supervisor }}</td>
-                <td>{{ r.submission_date }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      {% else %}
-        <div class="alert alert-info">No registrations yet for ND Computer Science.</div>
-      {% endif %}
-    </div>
+  <!-- ── Programme filter pills ───────────────────────────────────────────── -->
+  <div class="mb-3 d-flex flex-wrap gap-2 align-items-center">
+    <small class="text-muted me-1">Filter by cohort:</small>
+    <a href="{{ url_for('view_registered', view=view_mode, programme='') }}"
+       class="btn btn-sm {% if not filter_prog %}btn-dark{% else %}btn-outline-secondary{% endif %}">
+      All Cohorts
+    </a>
+    {% for prog in programmes %}
+    <a href="{{ url_for('view_registered', view=view_mode, programme=prog) }}"
+       class="btn btn-sm {% if filter_prog == prog %}btn-dark{% else %}btn-outline-secondary{% endif %}">
+      {{ prog }}
+    </a>
+    {% endfor %}
   </div>
 
-  <div class="text-center d-grid gap-2 mt-4">
-    <a href="{{ url_for('submit_topic') }}" class="btn btn-primary btn-lg">Submit a Topic</a>
-    <a href="{{ url_for('home') }}" class="btn btn-outline-secondary btn-lg">Back to Home</a>
+  <!-- ── No data notice ───────────────────────────────────────────────────── -->
+  {% if total == 0 %}
+  <div class="alert alert-info">
+    {% if view_mode == 'current' %}
+      No topics registered for <strong>{{ current_session }}</strong> yet.
+    {% elif view_mode == 'past' %}
+      No records found for past sessions.
+    {% else %}
+      No registrations found.
+    {% endif %}
   </div>
+  {% endif %}
+
+  <!-- ── Tables per programme ─────────────────────────────────────────────── -->
+  {% for prog in programmes %}
+    {% set rows = registrations[prog] %}
+    {% if rows %}
+    <div class="card mb-4 shadow-sm">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>{{ prog }}</strong>
+        <span class="badge bg-success">{{ rows|length }} registered</span>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-striped table-hover table-sm mb-0">
+            <thead class="table-dark">
+              <tr>
+                <th style="width:3%">#</th>
+                <th style="width:20%">Student Name</th>
+                <th style="width:13%">Matric No.</th>
+                <th>Project Topic</th>
+                <th style="width:17%">Supervisor</th>
+                <th style="width:12%">Date Submitted</th>
+                {% if view_mode != 'current' %}
+                <th style="width:9%">Session</th>
+                {% endif %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in rows %}
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ r.student_name }}</td>
+                <td><code>{{ r.matric_number }}</code></td>
+                <td>{{ r.topic_title }}</td>
+                <td>{{ r.supervisor }}</td>
+                <td>
+                  {% if r.submission_date %}
+                    {{ r.submission_date[:10] }}
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+                {% if view_mode != 'current' %}
+                <td>
+                  <span class="badge {% if r.session == current_session %}bg-primary{% else %}bg-secondary{% endif %}">
+                    {{ r.session if r.session else '—' }}
+                  </span>
+                </td>
+                {% endif %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  {% endfor %}
+
+  <!-- ── Unmatched records — coordinator only ──────────────────────────────── -->
+  {% if unmatched and is_coordinator %}
+  <div class="card border-warning mb-4">
+    <div class="card-header bg-warning text-dark">
+      ⚠️ Unrecognised Programme Records ({{ unmatched|length }})
+      <small class="ms-2">— check for spelling in the sheet</small>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead>
+            <tr><th>Name</th><th>Matric</th><th>Programme (raw)</th><th>Topic</th></tr>
+          </thead>
+          <tbody>
+            {% for r in unmatched %}
+            <tr>
+              <td>{{ r.get('Student Name','') }}</td>
+              <td>{{ r.get('Matric Number','') }}</td>
+              <td><code>{{ r.get('Programme','') }}</code></td>
+              <td>{{ r.get('Topic Title','') }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
 </div>
 {% endblock %}
-
-
-

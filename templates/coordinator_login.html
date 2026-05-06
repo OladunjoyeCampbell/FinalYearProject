@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-{% block title %}Supervisor Login{% endblock %}
+{% block title %}Project Coordinator Login{% endblock %}
 
 {% block content %}
 <div class="container mt-5">
   <div class="row justify-content-center">
     <div class="col-md-5">
       <div class="card shadow">
-        <div class="card-header bg-secondary text-white text-center py-3">
-          <h5 class="mb-0">👤 Supervisor Login</h5>
-          <small>Niger State Polytechnic, Zungeru — Dept of Computer Science</small>
+        <div class="card-header bg-dark text-white text-center py-3">
+          <h5 class="mb-0">🔐 Project Coordinator Login</h5>
+          <small class="text-muted">Niger State Polytechnic, Zungeru — Dept of Computer Science</small>
         </div>
         <div class="card-body p-4">
           {% with messages = get_flashed_messages(with_categories=true) %}
@@ -19,18 +19,18 @@
 
           <form method="POST">
             <div class="mb-3">
-              <label class="form-label fw-bold">Passphrase</label>
+              <label class="form-label fw-bold">Coordinator Passphrase</label>
               <input type="password" name="passphrase" class="form-control"
-                     placeholder="Enter supervisor passphrase" autofocus required>
+                     placeholder="Enter coordinator passphrase" autofocus required>
             </div>
-            <button type="submit" class="btn btn-secondary w-100">Login as Supervisor</button>
+            <button type="submit" class="btn btn-dark w-100">Login as Coordinator</button>
           </form>
 
           <hr class="my-3">
           <div class="text-center">
             <small class="text-muted">
-              Project Coordinator?
-              <a href="{{ url_for('coordinator_login') }}">Coordinator Login →</a>
+              Are you a supervisor?
+              <a href="{{ url_for('staff_login') }}">Supervisor Login →</a>
             </small>
           </div>
         </div>

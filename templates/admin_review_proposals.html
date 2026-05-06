@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Review Topic Proposals{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>📋 Review Topic Proposals</h4>
+    <a href="{{ url_for('view_registered') }}" class="btn btn-sm btn-outline-secondary">← Back</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="alert alert-{{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- ── Pending ── -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-warning text-dark">
+      <strong>⏳ Pending ({{ pending|length }})</strong>
+    </div>
+    <div class="card-body p-0">
+      {% if pending %}
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-dark">
+            <tr><th>#</th><th>Proposer</th><th>Type</th><th>Programme / Student</th>
+                <th>Proposed Topic</th><th>Note</th><th>Date</th><th>Action</th></tr>
+          </thead>
+          <tbody>
+            {% for p in pending %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <td>{{ p.Proposer }}</td>
+              <td><span class="badge bg-info text-dark">{{ p.Type }}</span></td>
+              <td>{{ p.Programme or p['Student Matric'] or '—' }}</td>
+              <td>{{ p['New Topic'] }}</td>
+              <td><small>{{ p.Note or '—' }}</small></td>
+              <td><small>{{ p['Submitted At'][:10] if p['Submitted At'] else '—' }}</small></td>
+              <td>
+                <form method="POST" action="{{ url_for('admin_decide_proposal') }}"
+                      class="d-flex gap-1">
+                  <input type="hidden" name="proposal_id" value="{{ p.ID }}">
+                  <button name="decision" value="Approved"
+                          class="btn btn-sm btn-success">✓ Approve</button>
+                  <button name="decision" value="Rejected"
+                          class="btn btn-sm btn-danger">✗ Reject</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="p-3 text-muted mb-0">No pending proposals.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── Approved ── -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-success text-white">
+      <strong>✓ Approved ({{ approved|length }})</strong>
+    </div>
+    <div class="card-body p-0">
+      {% if approved %}
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead class="table-dark">
+            <tr><th>Proposer</th><th>Type</th><th>Topic</th><th>Date</th></tr>
+          </thead>
+          <tbody>
+            {% for p in approved %}
+            <tr>
+              <td>{{ p.Proposer }}</td>
+              <td>{{ p.Type }}</td>
+              <td>{{ p['New Topic'] }}</td>
+              <td>{{ p['Submitted At'][:10] if p['Submitted At'] else '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="p-3 text-muted mb-0">None yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── Rejected ── -->
+  <div class="card shadow-sm">
+    <div class="card-header bg-danger text-white">
+      <strong>✗ Rejected ({{ rejected|length }})</strong>
+    </div>
+    <div class="card-body p-0">
+      {% if rejected %}
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead class="table-dark">
+            <tr><th>Proposer</th><th>Type</th><th>Topic</th><th>Date</th></tr>
+          </thead>
+          <tbody>
+            {% for p in rejected %}
+            <tr>
+              <td>{{ p.Proposer }}</td>
+              <td>{{ p.Type }}</td>
+              <td>{{ p['New Topic'] }}</td>
+              <td>{{ p['Submitted At'][:10] if p['Submitted At'] else '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="p-3 text-muted mb-0">None yet.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

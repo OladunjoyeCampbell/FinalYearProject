@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}Edit Student Record{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>✏️ Edit Student Record</h4>
+    <a href="{{ url_for('view_registered') }}" class="btn btn-sm btn-outline-secondary">← Back</a>
+  </div>
+
+  <div class="alert alert-warning">
+    <strong>Project Coordinator only.</strong> Changes are written directly to the register.
+    Use this to correct matric numbers, topics, supervisors, or session placement.
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="alert alert-{{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- ── Edit form populated by JS when student is selected ── -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-dark text-white"><strong>Select and Edit a Student</strong></div>
+    <div class="card-body">
+      <form method="POST" id="editForm">
+        <input type="hidden" name="orig_matric" id="orig_matric">
+
+        <div class="mb-3">
+          <label class="form-label">Select Student</label>
+          <select class="form-select" id="studentSelect" onchange="fillForm(this)">
+            <option value="">— choose student —</option>
+            {% for s in students %}
+            <option value="{{ loop.index0 }}"
+              data-name="{{ s['Student Name'] }}"
+              data-matric="{{ s['Matric Number'] }}"
+              data-prog="{{ s['Programme'] }}"
+              data-topic="{{ s['Topic Title'] }}"
+              data-super="{{ s['Supervisor'] }}"
+              data-session="{{ s['Session'] }}">
+              {{ s['Student Name'] }} — {{ s['Matric Number'] }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Full Name</label>
+            <input type="text" name="student_name" id="f_name" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Matric Number</label>
+            <input type="text" name="matric_number" id="f_matric" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Programme</label>
+            <select name="programme" id="f_prog" class="form-select" required>
+              {% for p in programmes %}
+              <option value="{{ p }}">{{ p }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Session</label>
+            <select name="session" id="f_session" class="form-select" required>
+              {% for s in sessions %}
+              <option value="{{ s }}">{{ s }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-8">
+            <label class="form-label">Project Topic</label>
+            <textarea name="topic_title" id="f_topic" class="form-control" rows="2" required></textarea>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Supervisor</label>
+            <input type="text" name="supervisor" id="f_super" class="form-control" required>
+          </div>
+        </div>
+
+        <div class="mt-3 d-flex gap-2">
+          <button type="submit" class="btn btn-danger" id="saveBtn" disabled>
+            💾 Save Changes
+          </button>
+          <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">
+            Clear
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Full student list for reference ── -->
+  <div class="card shadow-sm">
+    <div class="card-header"><strong>All Registered Students</strong>
+      <span class="badge bg-secondary ms-2">{{ students|length }}</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm table-striped table-hover mb-0">
+          <thead class="table-dark">
+            <tr><th>#</th><th>Name</th><th>Matric</th><th>Programme</th>
+                <th>Topic</th><th>Supervisor</th><th>Session</th></tr>
+          </thead>
+          <tbody>
+            {% for s in students %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <td>{{ s['Student Name'] }}</td>
+              <td><code>{{ s['Matric Number'] }}</code></td>
+              <td>{{ s['Programme'] }}</td>
+              <td>{{ s['Topic Title'][:60] }}{% if s['Topic Title']|length > 60 %}…{% endif %}</td>
+              <td>{{ s['Supervisor'] }}</td>
+              <td><span class="badge {% if s['Session'] == current_session %}bg-primary{% else %}bg-secondary{% endif %}">
+                {{ s['Session'] or '—' }}</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const students = [
+  {% for s in students %}
+  {name:"{{ s['Student Name']|replace('"','\\"') }}",
+   matric:"{{ s['Matric Number'] }}",
+   prog:"{{ s['Programme'] }}",
+   topic:`{{ s['Topic Title']|replace('`','\\`') }}`,
+   supervisor:"{{ s['Supervisor']|replace('"','\\"') }}",
+   session:"{{ s['Session'] }}"},
+  {% endfor %}
+];
+
+function fillForm(sel) {
+  const idx = sel.value;
+  if (idx === '') { resetForm(); return; }
+  const s = students[idx];
+  document.getElementById('orig_matric').value = s.matric;
+  document.getElementById('f_name').value    = s.name;
+  document.getElementById('f_matric').value  = s.matric;
+  document.getElementById('f_topic').value   = s.topic;
+  document.getElementById('f_super').value   = s.supervisor;
+  setSelect('f_prog',    s.prog);
+  setSelect('f_session', s.session);
+  document.getElementById('saveBtn').disabled = false;
+}
+
+function setSelect(id, val) {
+  const el = document.getElementById(id);
+  for (let o of el.options) { if (o.value === val) { o.selected = true; break; } }
+}
+
+function resetForm() {
+  document.getElementById('studentSelect').value = '';
+  ['f_name','f_matric','f_topic','f_super','orig_matric'].forEach(id =>
+    document.getElementById(id).value = '');
+  document.getElementById('saveBtn').disabled = true;
+}
+</script>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Portal Closed{% endblock %}
+{% block content %}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-7 text-center">
+      <div class="card shadow border-warning">
+        <div class="card-body py-5">
+          <h1 class="display-4 text-warning mb-3">🔒</h1>
+          <h3 class="text-warning">Portal Currently Closed</h3>
+          <p class="lead mt-3">{{ message }}</p>
+          <hr>
+          <p class="text-muted small">
+            Niger State Polytechnic, Zungeru — Department of Computer Science<br>
+            Final Year Project Topics Portal
+          </p>
+          <a href="{{ url_for('home') }}" class="btn btn-outline-secondary mt-2">
+            ← Return to Home
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

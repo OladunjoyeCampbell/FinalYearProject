@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% block title %}Manage Presentations{% endblock %}
+{% block content %}
+<div class="container mt-4">
+
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h4>🎓 Manage Presentation Clearance &amp; Payment</h4>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('admin_presentation_list') }}" class="btn btn-sm btn-success">
+        🖨️ Presentation List
+      </a>
+      <a href="{{ url_for('view_registered') }}" class="btn btn-sm btn-outline-secondary">
+        ← Back
+      </a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="alert alert-{{ cat }} py-2 alert-dismissible">
+        {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- ── Summary cards ── -->
+  <div class="row g-3 mb-4">
+    {% set total = eligible|length + cleared_only|length + paid_only|length + neither|length %}
+    <div class="col-6 col-md-3">
+      <div class="card text-center border-success shadow-sm">
+        <div class="card-body py-2">
+          <h3 class="text-success mb-0">{{ eligible|length }}</h3>
+          <small>✅ Eligible (Cleared + Paid)</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card text-center border-info shadow-sm">
+        <div class="card-body py-2">
+          <h3 class="text-info mb-0">{{ cleared_only|length }}</h3>
+          <small>✓ Cleared — Awaiting Payment</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card text-center border-warning shadow-sm">
+        <div class="card-body py-2">
+          <h3 class="text-warning mb-0">{{ paid_only|length }}</h3>
+          <small>💰 Paid — Awaiting Clearance</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card text-center border-danger shadow-sm">
+        <div class="card-body py-2">
+          <h3 class="text-danger mb-0">{{ neither|length }}</h3>
+          <small>⚠️ Neither Cleared nor Paid</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Sync and fee controls ── -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-body py-2 d-flex flex-wrap gap-3 align-items-center">
+      <form method="POST" class="d-flex gap-2 align-items-center">
+        <input type="hidden" name="action" value="sync">
+        <button type="submit" class="btn btn-sm btn-outline-primary">
+          🔄 Sync Students from Register
+        </button>
+        <small class="text-muted">
+          ({{ not_synced|length }} student(s) not yet in Presentations sheet)
+        </small>
+      </form>
+      <div class="d-flex gap-2 align-items-center ms-auto">
+        <label class="mb-0 text-nowrap fw-bold">Presentation Fee: ₦</label>
+        <form method="GET" class="d-flex gap-1">
+          <input type="number" name="fee" value="{{ default_fee }}"
+                 class="form-control form-control-sm" style="width:100px">
+          <button type="submit" class="btn btn-sm btn-outline-secondary">Set</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Full student table ── -->
+  <div class="card shadow-sm">
+    <div class="card-header">
+      <strong>All Students — {{ current_session }}</strong>
+      <span class="badge bg-secondary ms-2">{{ records|length }}</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm table-striped table-hover mb-0">
+          <thead class="table-dark">
+            <tr>
+              <th>#</th>
+              <th>Student Name</th>
+              <th>Matric No.</th>
+              <th>Programme</th>
+              <th>Supervisor</th>
+              <th>Cleared?</th>
+              <th>Cleared By</th>
+              <th>Payment</th>
+              <th>Eligible?</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in records | sort(attribute='Student Name') %}
+            <tr class="{% if r.eligible %}table-success{% elif r.get('Supervisor Cleared','')=='Yes' %}table-info{% elif r.get('Payment Status','')=='Paid' %}table-warning{% endif %}">
+              <td>{{ loop.index }}</td>
+              <td>{{ r['Student Name'] }}</td>
+              <td><code>{{ r['Matric Number'] }}</code></td>
+              <td>{{ r['Programme'] }}</td>
+              <td>{{ r['Supervisor'] }}</td>
+              <td>
+                <span class="badge {% if r.get('Supervisor Cleared','')=='Yes' %}bg-success{% else %}bg-secondary{% endif %}">
+                  {{ r.get('Supervisor Cleared','No') }}
+                </span>
+              </td>
+              <td><small>{{ r.get('Cleared By','—') }}</small></td>
+              <td>
+                <span class="badge {% if r.get('Payment Status','')=='Paid' %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                  {{ r.get('Payment Status','Unpaid') }}
+                </span>
+                {% if r.get('Payment Amount') %}
+                  <small class="d-block text-muted">₦{{ r['Payment Amount'] }}</small>
+                {% endif %}
+              </td>
+              <td>
+                {% if r.eligible %}
+                  <span class="badge bg-success">✅ Yes</span>
+                {% else %}
+                  <span class="badge bg-danger">No</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="d-flex flex-column gap-1">
+                  <!-- Payment -->
+                  {% if r.get('Payment Status','') != 'Paid' %}
+                  <form method="POST" class="d-flex gap-1">
+                    <input type="hidden" name="action" value="pay">
+                    <input type="hidden" name="matric" value="{{ r['Matric Number'] }}">
+                    <input type="hidden" name="amount" value="{{ default_fee }}">
+                    <input type="hidden" name="marked_by" value="Project Coordinator">
+                    <button class="btn btn-xs btn-success btn-sm py-0 px-1">
+                      💰 Mark Paid ₦{{ default_fee }}
+                    </button>
+                  </form>
+                  {% else %}
+                  <form method="POST">
+                    <input type="hidden" name="action" value="unpay">
+                    <input type="hidden" name="matric" value="{{ r['Matric Number'] }}">
+                    <button class="btn btn-xs btn-outline-danger btn-sm py-0 px-1">
+                      ✗ Reverse Payment
+                    </button>
+                  </form>
+                  {% endif %}
+                  <!-- Clearance override -->
+                  {% if r.get('Supervisor Cleared','') != 'Yes' %}
+                  <form method="POST" class="d-flex gap-1">
+                    <input type="hidden" name="action" value="clear">
+                    <input type="hidden" name="matric" value="{{ r['Matric Number'] }}">
+                    <input type="hidden" name="cleared_by" value="Project Coordinator (Override)">
+                    <button class="btn btn-xs btn-info btn-sm py-0 px-1 text-white">
+                      ✓ Override Clear
+                    </button>
+                  </form>
+                  {% else %}
+                  <form method="POST">
+                    <input type="hidden" name="action" value="unclear">
+                    <input type="hidden" name="matric" value="{{ r['Matric Number'] }}">
+                    <button class="btn btn-xs btn-outline-secondary btn-sm py-0 px-1">
+                      ✗ Undo Clear
+                    </button>
+                  </form>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

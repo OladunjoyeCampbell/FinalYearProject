@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Portal Settings{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>⚙️ Portal Settings</h4>
+    <a href="{{ url_for('view_registered') }}" class="btn btn-sm btn-outline-secondary">← Back</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="alert alert-{{ cat }} py-2 alert-dismissible">
+        {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="row g-4">
+
+    <!-- ── Portal Open/Close ── -->
+    <div class="col-md-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header bg-dark text-white">
+          <strong>🔒 Portal Status</strong>
+        </div>
+        <div class="card-body">
+          <div class="text-center mb-3">
+            {% if portal_open %}
+              <span class="badge bg-success fs-5 px-4 py-2">🟢 OPEN</span>
+              <p class="mt-2 text-muted">Students can currently submit topics.</p>
+            {% else %}
+              <span class="badge bg-danger fs-5 px-4 py-2">🔴 CLOSED</span>
+              <p class="mt-2 text-muted">Students cannot submit topics.</p>
+            {% endif %}
+          </div>
+          <form method="POST">
+            <input type="hidden" name="action" value="toggle_portal">
+            <button type="submit"
+                    class="btn w-100 {% if portal_open %}btn-danger{% else %}btn-success{% endif %}">
+              {% if portal_open %}🔒 Close Portal{% else %}🔓 Open Portal{% endif %}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Closed Message ── -->
+    <div class="col-md-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header bg-dark text-white">
+          <strong>📢 Closed-Portal Message</strong>
+        </div>
+        <div class="card-body">
+          <p class="text-muted small">
+            This message is shown to students when the portal is closed.
+          </p>
+          <form method="POST">
+            <input type="hidden" name="action" value="set_message">
+            <div class="mb-3">
+              <textarea name="portal_message" class="form-control" rows="4">{{ portal_message }}</textarea>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Update Message</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Presentation Fee ── -->
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-header bg-dark text-white">
+          <strong>💰 Presentation Fee</strong>
+        </div>
+        <div class="card-body">
+          <p class="text-muted small">
+            Current fee: <strong>₦{{ "{:,}".format(presentation_fee) }}</strong>.
+            Change this if the fee is revised for this session.
+          </p>
+          <form method="POST" class="d-flex gap-2">
+            <input type="hidden" name="action" value="set_fee">
+            <div class="input-group">
+              <span class="input-group-text">₦</span>
+              <input type="number" name="fee" class="form-control"
+                     value="{{ presentation_fee }}" min="0" step="100">
+            </div>
+            <button type="submit" class="btn btn-primary text-nowrap">Set Fee</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Quick links ── -->
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-header bg-dark text-white">
+          <strong>🔗 Quick Links</strong>
+        </div>
+        <div class="card-body d-flex flex-column gap-2">
+          <a href="{{ url_for('admin_supervisors') }}" class="btn btn-outline-primary">
+            👥 Manage Supervisors List
+          </a>
+          <a href="{{ url_for('admin_manage_presentations') }}" class="btn btn-outline-success">
+            🎓 Manage Presentations
+          </a>
+          <a href="{{ url_for('download_registered_topics', view='current') }}"
+             class="btn btn-outline-dark">
+            ⬇️ Download Current Session (Excel)
+          </a>
+          <a href="{{ url_for('download_registered_topics', view='all') }}"
+             class="btn btn-outline-secondary">
+            ⬇️ Download All Sessions (Excel)
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
