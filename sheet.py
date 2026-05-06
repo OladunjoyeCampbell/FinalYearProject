@@ -159,31 +159,42 @@ _students_sheet   = None
 #    )
 
 def get_credentials():
-    creds_json = os.getenv(CREDENTIALS_ENV_VAR)
-
+    # 1. Try environment variable (single-line minified JSON)
+    creds_json = os.getenv(CREDENTIALS_ENV_VAR, "").strip()
     if creds_json:
-        info = json.loads(creds_json)
-
-        # 🔴 CRITICAL FIX: restore private key formatting for JWT signing
+        try:
+            info = json.loads(creds_json)
+        except json.JSONDecodeError as e:
+            raise EnvironmentError(
+                f"'{CREDENTIALS_ENV_VAR}' contains invalid JSON: {e}"
+            ) from e
         if "private_key" in info:
             info["private_key"] = info["private_key"].replace("\\n", "\n")
-
         return service_account.Credentials.from_service_account_info(
-            info,
-            scopes=SCOPES
+            info, scopes=SCOPES
         )
 
-    creds_file = os.path.join(os.getcwd(), "credentials.json")
-
-    if os.path.isfile(creds_file):
+    # 2. Try Render Secret File (recommended — avoids paste/formatting issues)
+    secret_file = "/etc/secrets/credentials.json"
+    if os.path.isfile(secret_file):
         return service_account.Credentials.from_service_account_file(
-            creds_file,
-            scopes=SCOPES
+            secret_file, scopes=SCOPES
+        )
+
+    # 3. Try local credentials.json (development only)
+    local_file = os.path.join(os.getcwd(), "credentials.json")
+    if os.path.isfile(local_file):
+        return service_account.Credentials.from_service_account_file(
+            local_file, scopes=SCOPES
         )
 
     raise EnvironmentError(
-        f"No Google credentials found. Set {CREDENTIALS_ENV_VAR} or provide credentials.json"
+        "No Google credentials found. Options:\n"
+        "  1. Render env var: set GOOGLE_CREDENTIALS_JSON to minified JSON\n"
+        "  2. Render Secret File: add file at /etc/secrets/credentials.json\n"
+        "  3. Local dev: place credentials.json in the project root"
     )
+
 
 
 def _reset_globals():
