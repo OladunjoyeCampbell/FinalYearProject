@@ -30,9 +30,12 @@
         </div>
         <div class="card-body">
           <p class="mb-2">You have already selected a topic this session.
-             To change it, drop your current topic first.</p>
+            To change it, drop your current topic first.</p>
           <form method="POST" action="{{ url_for('drop_topic') }}"
-                onsubmit="return confirm('Drop your current topic? It will return to the available pool.')">
+                onsubmit="return confirm(
+                  'Drop your current topic?\n'
+                  + 'It will return to the available pool.\n'
+                  + 'You can then select a new topic.')">
             <button type="submit" class="btn btn-outline-danger btn-sm">
               🗑️ Drop My Current Topic
             </button>
@@ -40,16 +43,19 @@
         </div>
       </div>
 
-      {% elif not assigned_supervisor %}
-      <!-- No supervisor assigned yet -->
+      {% else %}
+      <!-- No topic yet — show submission form -->
+
+      {% if not assigned_supervisor %}
+      <!-- No supervisor assigned — warn but do NOT block -->
       <div class="alert alert-warning">
         <strong>⚠️ No Supervisor Assigned Yet</strong><br>
         The Project Coordinator has not yet assigned a supervisor to you.
-        Please contact the Project Coordinator before submitting your topic.
+        You may still select a topic below, but please contact the
+        Project Coordinator to confirm your supervisor assignment.
       </div>
+      {% endif %}
 
-      {% else %}
-      <!-- Topic submission form -->
       <div class="card shadow-sm mb-4">
         <div class="card-header bg-dark text-white">
           <strong>Select and Submit a Topic</strong>
@@ -57,9 +63,12 @@
         <div class="card-body">
           <form method="POST">
 
-            <!-- Pre-assigned supervisor — read only -->
+            <!-- Pre-assigned supervisor — read only if assigned -->
             <div class="mb-3">
-              <label class="form-label fw-bold">Your Assigned Supervisor</label>
+              <label class="form-label fw-bold">
+                Your Assigned Supervisor
+              </label>
+              {% if assigned_supervisor %}
               <div class="input-group">
                 <span class="input-group-text">👤</span>
                 <input type="text" class="form-control bg-light"
@@ -68,9 +77,29 @@
                        value="{{ assigned_supervisor }}">
               </div>
               <small class="text-muted">
-                Assigned by the Project Coordinator. Contact the coordinator
-                if this is incorrect.
+                Assigned by the Project Coordinator.
+                Contact them if this is incorrect.
               </small>
+              {% elif supervisors %}
+              <!-- Has supervisor list but not assigned — allow selection -->
+              <select name="supervisor" class="form-select" required>
+                <option value="">— Select your supervisor —</option>
+                {% for sup in supervisors %}
+                <option value="{{ sup }}">{{ sup }}</option>
+                {% endfor %}
+              </select>
+              <small class="text-warning">
+                ⚠️ You have not been assigned a supervisor yet.
+                Select from the list or contact the coordinator.
+              </small>
+              {% else %}
+              <!-- No supervisor list at all — free text -->
+              <input type="text" name="supervisor" class="form-control"
+                     placeholder="Enter supervisor name" required>
+              <small class="text-muted">
+                Contact the Project Coordinator for your supervisor name.
+              </small>
+              {% endif %}
             </div>
 
             <!-- Topic selection -->
@@ -85,8 +114,9 @@
                 <option value="{{ topic }}">{{ topic }}</option>
                 {% endfor %}
               </select>
-              <small class="text-muted">{{ topics|length }} topic(s) available for
-                {{ session.programme }}</small>
+              <small class="text-muted">
+                {{ topics|length }} topic(s) available for {{ session.programme }}
+              </small>
               {% else %}
               <div class="alert alert-warning mb-0">
                 No topics are currently available for your programme.
@@ -105,7 +135,7 @@
         </div>
       </div>
 
-      <!-- Topics preview -->
+      <!-- Topics preview table -->
       {% if topics %}
       <div class="card shadow-sm">
         <div class="card-header">
