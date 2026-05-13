@@ -1,29 +1,170 @@
 {% extends "base.html" %}
-
-{% block title %}Welcome{% endblock %}
+{% block title %}Home – Final Year Project Portal{% endblock %}
 
 {% block content %}
-<div class="container py-5 text-center">
-  <img src="{{ url_for('static', filename='logo.png') }}" alt="Niger State Polytechnic Logo" style="max-height: 100px;" class="mb-4">
+<style>
+  .hero-section {
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    color: white;
+    padding: 4rem 0;
+    border-radius: 0 0 2rem 2rem;
+    margin-bottom: 2rem;
+  }
+  .feature-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: none;
+    border-radius: 1rem;
+    box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1);
+  }
+  .feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 1rem 2rem rgba(0,0,0,0.15);
+  }
+  .btn-role {
+    border-radius: 2rem;
+    padding: 0.5rem 1.5rem;
+    font-weight: 500;
+  }
+  .stats-card {
+    background: #f8f9fa;
+    border-left: 4px solid #0d6efd;
+    border-radius: 0.75rem;
+  }
+  .footer-links a {
+    text-decoration: none;
+    color: #6c757d;
+    transition: color 0.2s;
+  }
+  .footer-links a:hover {
+    color: #0d6efd;
+  }
+</style>
 
-  <h2 class="text-uppercase fw-bold">Niger State Polytechnic, Zungeru</h2>
-  <h4 class="mb-4">Department of Computer Science</h4>
-
-  <h1 class="mb-4">Final Year Project Topic Submission Portal</h1>
-
-  {% if session.logged_in %}
-    <p class="lead">Hello, {{ session.student_name }}!</p>
-    <div class="d-grid gap-3 col-lg-6 col-md-8 col-12 mx-auto">
-      <a href="{{ url_for('submit_topic') }}" class="btn btn-primary btn-lg">Submit a Topic</a>
-      <a href="{{ url_for('view_topics') }}" class="btn btn-secondary btn-lg">View Available Topics</a>
-      <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-lg">Logout</a>
+<!-- Hero Section -->
+<div class="hero-section text-center">
+  <div class="container">
+    <h1 class="display-4 fw-bold mb-3">🎓 Final Year Project Portal</h1>
+    <p class="lead mb-4">Department of Computer Science, Niger State Polytechnic, Zungeru</p>
+    <p class="mb-4">Streamlining topic submission, supervisor clearance, and presentation management for final year students.</p>
+    <div class="d-flex flex-wrap justify-content-center gap-3">
+      <a href="{{ url_for('login') }}" class="btn btn-light btn-role">📘 Student Login</a>
+      <a href="{{ url_for('staff_login') }}" class="btn btn-outline-light btn-role">👥 Supervisor Login</a>
+      <a href="{{ url_for('coordinator_login') }}" class="btn btn-outline-light btn-role">⚙️ Coordinator Login</a>
     </div>
-  {% else %}
-    <div class="d-grid gap-3 col-lg-6 col-md-8 col-12 mx-auto">
-      <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg">Student Login</a>
-      <a href="{{ url_for('register') }}" class="btn btn-outline-primary btn-lg">Register as Student</a>
-      <a href="{{ url_for('view_topics') }}" class="btn btn-secondary btn-lg">View Available Topics</a>
-    </div>
-  {% endif %}
+  </div>
 </div>
+
+<!-- How It Works -->
+<div class="container mb-5">
+  <div class="text-center mb-4">
+    <h2 class="fw-semibold">📌 How It Works</h2>
+    <p class="text-muted">A simple, transparent process for managing your final year projects</p>
+  </div>
+  <div class="row g-4">
+    <div class="col-md-4">
+      <div class="card feature-card h-100">
+        <div class="card-body text-center">
+          <div class="display-4 text-primary">1️⃣</div>
+          <h5 class="card-title">Student Registration & Topic Selection</h5>
+          <p class="card-text">Register using your matric number, then browse available topics and submit your chosen project topic.</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card feature-card h-100">
+        <div class="card-body text-center">
+          <div class="display-4 text-success">2️⃣</div>
+          <h5 class="card-title">Supervisor Clearance</h5>
+          <p class="card-text">Your assigned supervisor reviews your topic and clears you for presentation when satisfied.</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card feature-card h-100">
+        <div class="card-body text-center">
+          <div class="display-4 text-warning">3️⃣</div>
+          <h5 class="card-title">Payment & Presentation</h5>
+          <p class="card-text">After clearance, make the presentation fee. You become eligible to present to the panel.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Key Features -->
+<div class="container mb-5">
+  <div class="text-center mb-4">
+    <h2 class="fw-semibold">✨ Key Features</h2>
+    <p class="text-muted">Designed to make the final year process efficient and transparent</p>
+  </div>
+  <div class="row g-4">
+    <div class="col-md-6 col-lg-3">
+      <div class="card h-100 text-center border-0 shadow-sm">
+        <div class="card-body">
+          <i class="fs-1">📝</i>
+          <h6 class="mt-2">Topic Submission & Re‑selection</h6>
+          <small class="text-muted">Students can drop and re‑choose topics until deadline.</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+      <div class="card h-100 text-center border-0 shadow-sm">
+        <div class="card-body">
+          <i class="fs-1">👥</i>
+          <h6 class="mt-2">Supervisor Assignment</h6>
+          <small class="text-muted">Coordinator assigns supervisors via Google Sheet; portal reads it automatically.</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+      <div class="card h-100 text-center border-0 shadow-sm">
+        <div class="card-body">
+          <i class="fs-1">✅</i>
+          <h6 class="mt-2">Clearance & Payment Tracking</h6>
+          <small class="text-muted">Real‑time status: cleared, paid, eligible for presentation.</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+      <div class="card h-100 text-center border-0 shadow-sm">
+        <div class="card-body">
+          <i class="fs-1">📊</i>
+          <h6 class="mt-2">Reports & Export</h6>
+          <small class="text-muted">Download registered topics, presentation lists, and accepted topics in Excel.</small>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Important Information / Stats -->
+<div class="container mb-5">
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div class="stats-card p-3">
+        <h6><i class="bi bi-question-circle"></i> Need Help?</h6>
+        <p class="small mb-0">Contact the Project Coordinator, the Project Committee Chair or the HOD.</p>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="stats-card p-3">
+        <h6><i class="bi bi-calendar-event"></i> Current Session</h6>
+        <p class="small mb-0"><strong>{{ current_session }}</strong> – All deadlines are strictly enforced.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Links (Footer style) -->
+<div class="container border-top pt-3 pb-4">
+  <div class="row">
+    <div class="col-md-6 text-md-end footer-links">
+      <a href="{{ url_for('login') }}" class="me-2">Student</a> |
+      <a href="{{ url_for('staff_login') }}" class="mx-2">Supervisor</a> |
+      <a href="{{ url_for('coordinator_login') }}" class="mx-2">Coordinator</a> |
+      <a href="{{ url_for('view_topics') }}" class="ms-2">View Topics</a>
+    </div>
+  </div>
+</div>
+
 {% endblock %}

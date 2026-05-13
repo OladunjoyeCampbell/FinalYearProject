@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Accepted Topics – {{ current_session }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+      <h4 class="mb-0">
+        📋 Topics Accepted by Panel
+        <span class="badge bg-success ms-2">{{ accepted|length }} student{{ 's' if accepted|length != 1 }}</span>
+      </h4>
+      <small class="text-muted">Session: <strong>{{ current_session }}</strong></small>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('accepted_topics', view='excel', programme=programme_filter) }}" class="btn btn-sm btn-success">
+        <i class="fas fa-download"></i> Download Excel
+      </a>
+      <button onclick="window.print();" class="btn btn-sm btn-secondary">🖨️ Print / PDF</button>
+      <a href="{{ url_for('admin_manage_presentations') }}" class="btn btn-sm btn-outline-primary">← Back to Presentations</a>
+    </div>
+  </div>
+
+  <!-- Programme filter pills -->
+  <div class="mb-3 d-flex flex-wrap gap-2 align-items-center">
+    <small class="text-muted me-1">Filter by cohort:</small>
+    <a href="{{ url_for('accepted_topics', programme='') }}" class="btn btn-sm {% if not programme_filter %}btn-dark{% else %}btn-outline-secondary{% endif %}">
+      All Cohorts
+    </a>
+    {% for prog in programmes %}
+    <a href="{{ url_for('accepted_topics', programme=prog) }}"
+       class="btn btn-sm {% if programme_filter == prog %}btn-dark{% else %}btn-outline-secondary{% endif %}">
+      {{ prog }}
+    </a>
+    {% endfor %}
+  </div>
+
+  <!-- Summary cards per programme -->
+  <div class="row g-3 mb-4">
+    {% for prog in programmes %}
+      {% set count = accepted | selectattr('Programme','equalto',prog) | list | length %}
+      <div class="col-md-4">
+        <div class="card text-center border-primary shadow-sm">
+          <div class="card-body py-2">
+            <h5 class="card-title mb-0 text-primary">{{ count }}</h5>
+            <small class="text-muted">{{ prog.split(' ')[:2]|join(' ') }}</small>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- Main table (printable) -->
+  {% if accepted %}
+    <div class="table-responsive">
+      <table class="table table-bordered table-striped table-hover">
+        <thead class="table-dark">
+          <tr>
+            <th>S/N</th>
+            <th>Student Name</th>
+            <th>Matric Number</th>
+            <th>Programme</th>
+            <th>Topic Title</th>
+            <th>Supervisor</th>
+            <th>Panel Accepted Date</th>
+            <th>Cleared By</th>
+            <th>Payment Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for student in accepted %}
+          <tr>
+            <td class="align-middle">{{ loop.index }}</td>
+            <td class="align-middle">{{ student['Student Name'] }}</td>
+            <td class="align-middle"><code>{{ student['Matric Number'] }}</code></td>
+            <td class="align-middle">{{ student['Programme'] }}</td>
+            <td class="align-middle">{{ student['Topic Title'] }}</td>
+            <td class="align-middle">{{ student['Supervisor'] }}</td>
+            <td class="align-middle">
+              {% if student.get('Panel Accepted Date') %}
+                {{ student['Panel Accepted Date'][:10] }}
+              {% else %}
+                {{ student.get('Payment Date', '—')[:10] if student.get('Payment Date') else '—' }}
+              {% endif %}
+            </td>
+            <td class="align-middle">{{ student.get('Cleared By', '—') }}</td>
+            <td class="align-middle">{{ student.get('Payment Date', '—')[:10] if student.get('Payment Date') else '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="text-muted mt-2">Generated: {{ generated_at }}</p>
+  {% else %}
+    <div class="alert alert-info mt-3">
+      No panel‑accepted topics found for the selected filter.
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

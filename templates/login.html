@@ -19,14 +19,26 @@
             {% endfor %}
           {% endwith %}
 
-          <form method="POST">
+          <form method="POST" autocomplete="on">
             <div class="mb-3">
               <label class="form-label">Matric Number</label>
-              <input name="matric_number" type="text" class="form-control form-control-lg" required>
+              <input name="matric_number" type="text"
+                     class="form-control form-control-lg"
+                     autocomplete="username"
+                     placeholder="e.g. HNDNCC/024/0001"
+                     required>
             </div>
             <div class="mb-3">
               <label class="form-label">Password</label>
-              <input name="password" type="password" class="form-control form-control-lg" required>
+              <div class="input-group">
+                <input name="password" type="password" id="loginPassword"
+                       class="form-control form-control-lg"
+                       autocomplete="current-password"
+                       required>
+                <button class="btn btn-outline-secondary" type="button"
+                        onclick="togglePwd('loginPassword', this)"
+                        aria-label="Show/hide password">👁</button>
+              </div>
             </div>
             <div class="d-grid">
               <button type="submit" class="btn btn-primary btn-lg">Login</button>
@@ -46,4 +58,12 @@
     </div>
   </div>
 </div>
+
+<script>
+function togglePwd(inputId, btn) {
+  var inp = document.getElementById(inputId);
+  if (inp.type === 'password') { inp.type = 'text';  btn.textContent = '🙈'; }
+  else                         { inp.type = 'password'; btn.textContent = '👁';  }
+}
+</script>
 {% endblock %}

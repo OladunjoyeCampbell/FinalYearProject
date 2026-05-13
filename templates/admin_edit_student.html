@@ -3,28 +3,31 @@
 {% block content %}
 <div class="container mt-4">
   <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4>✏️ Edit Student Record</h4>
+    <h4>✏️ Edit / Delete Student Record</h4>
     <a href="{{ url_for('view_registered') }}" class="btn btn-sm btn-outline-secondary">← Back</a>
   </div>
 
   <div class="alert alert-warning">
-    <strong>Project Coordinator only.</strong> Changes are written directly to the register.
-    Use this to correct matric numbers, topics, supervisors, or session placement.
+    <strong>Project Coordinator only.</strong>
+    Use <strong>Edit</strong> to correct details.
+    Use <strong>🗑 Delete</strong> to remove a duplicate or erroneous entry —
+    the student's topic is returned to the available pool automatically.
   </div>
 
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% for cat, msg in messages %}
-      <div class="alert alert-{{ cat }}">{{ msg }}</div>
+      <div class="alert alert-{{ cat }} py-2 alert-dismissible">
+        {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
     {% endfor %}
   {% endwith %}
 
-  <!-- ── Edit form populated by JS when student is selected ── -->
+  <!-- Edit form -->
   <div class="card shadow-sm mb-4">
-    <div class="card-header bg-dark text-white"><strong>Select and Edit a Student</strong></div>
+    <div class="card-header bg-dark text-white"><strong>Edit a Student Record</strong></div>
     <div class="card-body">
       <form method="POST" id="editForm">
         <input type="hidden" name="orig_matric" id="orig_matric">
-
         <div class="mb-3">
           <label class="form-label">Select Student</label>
           <select class="form-select" id="studentSelect" onchange="fillForm(this)">
@@ -38,11 +41,11 @@
               data-super="{{ s['Supervisor'] }}"
               data-session="{{ s['Session'] }}">
               {{ s['Student Name'] }} — {{ s['Matric Number'] }}
+              ({{ s['Session'] }})
             </option>
             {% endfor %}
           </select>
         </div>
-
         <div class="row g-3">
           <div class="col-md-6">
             <label class="form-label">Full Name</label>
@@ -70,16 +73,16 @@
           </div>
           <div class="col-md-8">
             <label class="form-label">Project Topic</label>
-            <textarea name="topic_title" id="f_topic" class="form-control" rows="2" required></textarea>
+            <textarea name="topic_title" id="f_topic" class="form-control"
+                      rows="2" required></textarea>
           </div>
           <div class="col-md-4">
             <label class="form-label">Supervisor</label>
             <input type="text" name="supervisor" id="f_super" class="form-control" required>
           </div>
         </div>
-
         <div class="mt-3 d-flex gap-2">
-          <button type="submit" class="btn btn-danger" id="saveBtn" disabled>
+          <button type="submit" class="btn btn-primary" id="saveBtn" disabled>
             💾 Save Changes
           </button>
           <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">
@@ -90,17 +93,25 @@
     </div>
   </div>
 
-  <!-- ── Full student list for reference ── -->
+  <!-- Full student list with delete buttons -->
   <div class="card shadow-sm">
-    <div class="card-header"><strong>All Registered Students</strong>
-      <span class="badge bg-secondary ms-2">{{ students|length }}</span>
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <strong>All Registered Students</strong>
+      <span class="badge bg-secondary">{{ students|length }}</span>
     </div>
     <div class="card-body p-0">
       <div class="table-responsive">
         <table class="table table-sm table-striped table-hover mb-0">
           <thead class="table-dark">
-            <tr><th>#</th><th>Name</th><th>Matric</th><th>Programme</th>
-                <th>Topic</th><th>Supervisor</th><th>Session</th></tr>
+            <tr>
+              <th>#</th>
+              <th>Name</th>
+              <th>Matric</th>
+              <th>Programme</th>
+              <th>Session</th>
+              <th>Fix Session</th>
+              <th>Delete</th>
+            </tr>
           </thead>
           <tbody>
             {% for s in students %}
@@ -108,11 +119,46 @@
               <td>{{ loop.index }}</td>
               <td>{{ s['Student Name'] }}</td>
               <td><code>{{ s['Matric Number'] }}</code></td>
-              <td>{{ s['Programme'] }}</td>
-              <td>{{ s['Topic Title'][:60] }}{% if s['Topic Title']|length > 60 %}…{% endif %}</td>
-              <td>{{ s['Supervisor'] }}</td>
-              <td><span class="badge {% if s['Session'] == current_session %}bg-primary{% else %}bg-secondary{% endif %}">
-                {{ s['Session'] or '—' }}</span></td>
+              <td><small>{{ s['Programme'] }}</small></td>
+              <td>
+                <span class="badge {% if s['Session'] == current_session %}bg-primary{% else %}bg-secondary{% endif %}">
+                  {{ s['Session'] or '—' }}
+                </span>
+              </td>
+              <td>
+                {% if s['Session'] != current_session %}
+                <form method="POST" action="{{ url_for('admin_update_session') }}"
+                      class="d-inline">
+                  <input type="hidden" name="matric_number"
+                         value="{{ s['Matric Number'] }}">
+                  <input type="hidden" name="session" value="{{ current_session }}">
+                  <button type="submit"
+                          class="btn btn-outline-primary btn-sm py-0 px-1">
+                    → {{ current_session }}
+                  </button>
+                </form>
+                {% else %}
+                <span class="text-muted small">current</span>
+                {% endif %}
+              </td>
+              <td>
+                <form method="POST"
+                      action="{{ url_for('admin_delete_student') }}"
+                      onsubmit="return confirm(
+                        'DELETE {{ s['Student Name']|replace("'","\\'") }}'
+                        + ' ({{ s['Matric Number'] }})?\n\n'
+                        + 'This removes them from ALL sheets and returns\n'
+                        + 'their topic to the available pool.\n\n'
+                        + 'This CANNOT be undone.')">
+                  <input type="hidden" name="matric"
+                         value="{{ s['Matric Number'] }}">
+                  <input type="hidden" name="reason"
+                         value="Duplicate/erroneous entry removed by coordinator">
+                  <button type="submit" class="btn btn-danger btn-sm py-0 px-1">
+                    🗑 Delete
+                  </button>
+                </form>
+              </td>
             </tr>
             {% endfor %}
           </tbody>
@@ -133,7 +179,6 @@ const students = [
    session:"{{ s['Session'] }}"},
   {% endfor %}
 ];
-
 function fillForm(sel) {
   const idx = sel.value;
   if (idx === '') { resetForm(); return; }
@@ -147,16 +192,14 @@ function fillForm(sel) {
   setSelect('f_session', s.session);
   document.getElementById('saveBtn').disabled = false;
 }
-
 function setSelect(id, val) {
   const el = document.getElementById(id);
-  for (let o of el.options) { if (o.value === val) { o.selected = true; break; } }
+  for (let o of el.options) { if (o.value === val) { o.selected=true; break; } }
 }
-
 function resetForm() {
   document.getElementById('studentSelect').value = '';
-  ['f_name','f_matric','f_topic','f_super','orig_matric'].forEach(id =>
-    document.getElementById(id).value = '');
+  ['f_name','f_matric','f_topic','f_super','orig_matric'].forEach(
+    id => document.getElementById(id).value = '');
   document.getElementById('saveBtn').disabled = true;
 }
 </script>

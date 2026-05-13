@@ -26,9 +26,17 @@
         <div class="row g-3">
           <div class="col-md-6">
             <label class="form-label">Your Name <span class="text-danger">*</span></label>
-            <input type="text" name="proposer_name" class="form-control"
-                   placeholder="e.g. Dr Usman Bello" required>
+            {% if is_coordinator %}
+              <input type="text" name="proposer_name" class="form-control"
+                     value="{{ default_proposer }}" placeholder="Project Coordinator">
+              <small class="text-muted">(You can edit if proposing on behalf of someone)</small>
+            {% else %}
+              <input type="text" class="form-control" value="{{ default_proposer }}" readonly disabled>
+              <input type="hidden" name="proposer_name" value="{{ default_proposer }}">
+              <small class="text-muted">(Your name is automatically taken from your login)</small>
+            {% endif %}
           </div>
+
           <div class="col-md-6">
             <label class="form-label">Proposal Type <span class="text-danger">*</span></label>
             <select name="proposal_type" class="form-select" onchange="toggleStudent(this)" required>
@@ -87,6 +95,7 @@
   </div>
   {% endif %}
 </div>
+
 <script>
 function toggleStudent(sel) {
   const isChange = sel.value === 'Topic Change';
