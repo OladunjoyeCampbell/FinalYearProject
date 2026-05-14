@@ -492,17 +492,15 @@ def admin_edit_student():
 @app.route('/supervisor/propose-topic', methods=['GET', 'POST'])
 @staff_required
 def supervisor_propose_topic():
-    all_students = sorted(get_taken_topics(), key=lambda r: r.get('Student Name','').lower())
-    programmes = PROGRAMMES
-    pending = get_topic_proposals(status='Pending') if session.get('role') == 'coordinator' else []
+    role = session.get('role')
+    supervisor_name = session.get('supervisor_name', '')
     
     if request.method == 'POST':
         proposal_type = request.form.get('proposal_type','')
-        # Use the logged-in name, not the form field
-        if session.get('role') == 'coordinator':
+        if role == 'coordinator':
             proposer = request.form.get('proposer_name', 'Project Coordinator').strip()
         else:
-            proposer = session.get('supervisor_name', '').strip()
+            proposer = supervisor_name
         programme = request.form.get('programme','').strip()
         new_topic = request.form.get('new_topic','').strip()
         student_matric = request.form.get('student_matric','').strip()
@@ -516,14 +514,30 @@ def supervisor_propose_topic():
             else:
                 flash('Failed to submit proposal. Try again.', 'danger')
         return redirect(url_for('supervisor_propose_topic'))
-    
-    # GET: set default proposer from session
-    default_proposer = session.get('supervisor_name', '')
-    return render_template('supervisor_propose_topic.html', 
-                           students=all_students,
-                           programmes=programmes, 
+
+    # ── GET: build student list based on role ──────────────────────────────
+    all_registered = get_taken_topics()   # all students with registered topics (current session)
+    programmes = PROGRAMMES
+    pending = get_topic_proposals(status='Pending') if role == 'coordinator' else []
+    default_proposer = supervisor_name if role == 'supervisor' else 'Project Coordinator'
+
+    if role == 'coordinator':
+        students = sorted(all_registered, key=lambda r: r.get('Student Name','').lower())
+    else:
+        # Supervisor: only show students assigned to them
+        assigned_matrics = get_students_for_supervisor(supervisor_name)
+        students = sorted(
+            [s for s in all_registered if s.get('Matric Number', '').strip() in assigned_matrics],
+            key=lambda r: r.get('Student Name','').lower()
+        )
+        if not students:
+            flash('No students are currently assigned to you. Contact the coordinator.', 'info')
+
+    return render_template('supervisor_propose_topic.html',
+                           students=students,
+                           programmes=programmes,
                            pending=pending,
-                           is_coordinator=(session.get('role') == 'coordinator'),
+                           is_coordinator=(role == 'coordinator'),
                            default_proposer=default_proposer)
 
 # ── Coordinator: Review and approve/reject proposals ──────────────────────────
