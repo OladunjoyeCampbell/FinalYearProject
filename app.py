@@ -177,19 +177,31 @@ def login():
         if not m or not p:
             flash('Enter both matric number and password.', 'danger')
         else:
+            # Verify password against Students sheet
             student = verify_student_v2(m, p)
-            if student:
+            if not student:
+                flash('Invalid matric number or password.', 'danger')
+            else:
+                # Check if student exists in AssignedSupervisors and has a supervisor
+                identity = lookup_student_in_master(m)
+                if not identity:
+                    flash('Your record was not found in the assigned supervisors list. Please contact the Project Coordinator.', 'danger')
+                    return redirect(url_for('login'))
+                assigned_supervisor = identity.get('Assigned Supervisor', '').strip()
+                if not assigned_supervisor:
+                    flash('You have not been assigned a supervisor yet. Please contact the Project Coordinator before logging in.', 'warning')
+                    return redirect(url_for('login'))
+                # All checks passed – log the student in
                 session.clear()
                 session.update({
                     'logged_in': True,
                     'matric_number': student.get('Matric Number', m),
                     'student_name': student.get('Student Name', m),
                     'programme': student.get('Programme', ''),
-                    'supervisor': student.get('Assigned Supervisor', ''),
+                    'supervisor': assigned_supervisor,
                 })
                 flash(f"Welcome, {student.get('Student Name', m)}!", 'success')
                 return redirect(url_for('submit_topic'))
-            flash('Invalid matric number or password.', 'danger')
     return render_template('login.html')
 
 # ── Student Registration ──────────────────────────────────────────────────────
@@ -268,16 +280,26 @@ def submit_topic():
     m = session['matric_number']
     prog = session.get('programme', '')
     just = session.pop('just_registered', False)
+    assigned_supervisor = session.get('supervisor', '')
+
+    # Optional: double-check that assigned_supervisor is not empty (though login already enforces)
+    if not assigned_supervisor:
+        flash('You have not been assigned a supervisor. Please contact the Project Coordinator.', 'danger')
+        return redirect(url_for('logout'))
 
     if not is_portal_open():
         return render_template('portal_closed.html', message=get_portal_message())
 
+    # Refresh programme from master sheet in case it changed (optional)
     identity = lookup_student_in_master(m)
     if identity:
         prog = identity.get('Programme', prog)
         session['programme'] = prog
         session['student_name'] = identity.get('Student Name', session.get('student_name', m))
-        session['supervisor'] = identity.get('Assigned Supervisor', '')
+        # supervisor should already be correct, but update if needed
+        if identity.get('Assigned Supervisor'):
+            session['supervisor'] = identity.get('Assigned Supervisor')
+            assigned_supervisor = session['supervisor']
 
     topics = get_available_topics(prog)
     taken = is_student_registered(m)
@@ -285,7 +307,8 @@ def submit_topic():
     if request.method == 'POST':
         name = session['student_name']
         t = request.form['topic_title'].strip()
-        sup = request.form['supervisor'].strip()
+        # Use the supervisor from session (no form input)
+        sup = assigned_supervisor
         if not all([name, m, prog, t, sup]):
             flash('All fields are required.', 'danger')
         elif taken:
@@ -297,15 +320,16 @@ def submit_topic():
         else:
             flash('Topic unavailable or already taken. Please choose another.', 'danger')
 
-    assigned_supervisor = session.get('supervisor', '') or get_assigned_supervisor(m)
-    supervisors = get_supervisor_names()
-    return render_template('submit_topic.html', topics=topics, already_registered=taken,
-                           just_registered=just, supervisors=supervisors,
+    return render_template('submit_topic.html',
+                           topics=topics,
+                           already_registered=taken,
+                           just_registered=just,
                            assigned_supervisor=assigned_supervisor)
 
 # ── View Available Topics ─────────────────────────────────────────────────────
 @app.route('/view-topics')
 def view_topics():
+      
     # Allow only logged-in students or staff
     if not (session.get('logged_in') or session.get('role')):
         flash('Please log in to view available topics.', 'warning')
@@ -317,7 +341,6 @@ def view_topics():
     else:
         topics = {p: get_available_topics(p) for p in PROGRAMMES}
     return render_template('view_topics.html', topics=topics, programme=prog)
-
 
 # ── Coordinator Login ─────────────────────────────────────────────────────────
 @app.route('/coordinator-login', methods=['GET', 'POST'])
@@ -415,11 +438,11 @@ def view_registered():
 @login_required
 def drop_topic():
     m = session['matric_number']
-    rec = find_student_record(m)
-    if not rec:
-        flash('No student record found.', 'warning')
+    prog = session.get('programme')
+    if not prog:
+        flash('Programme information missing. Please contact support.', 'danger')
         return redirect(url_for('submit_topic'))
-    prog = rec.get('Programme')
+    
     if drop_registered_topic(m, prog):
         flash('Topic dropped successfully.', 'success')
     else:

@@ -46,6 +46,16 @@
       {% else %}
       <!-- No topic yet — show submission form -->
 
+      {% if not assigned_supervisor %}
+      <!-- No supervisor assigned — warn but do NOT block -->
+      <div class="alert alert-warning">
+        <strong>⚠️ No Supervisor Assigned Yet</strong><br>
+        The Project Coordinator has not yet assigned a supervisor to you.
+        You may still select a topic below, but please contact the
+        Project Coordinator to confirm your supervisor assignment.
+      </div>
+      {% endif %}
+
       <div class="card shadow-sm mb-4">
         <div class="card-header bg-dark text-white">
           <strong>Select and Submit a Topic</strong>
@@ -53,11 +63,12 @@
         <div class="card-body">
           <form method="POST">
 
-            <!-- Assigned supervisor (read‑only) -->
+            <!-- Pre-assigned supervisor — read only if assigned -->
             <div class="mb-3">
               <label class="form-label fw-bold">
                 Your Assigned Supervisor
               </label>
+              {% if assigned_supervisor %}
               <div class="input-group">
                 <span class="input-group-text">👤</span>
                 <input type="text" class="form-control bg-light"
@@ -67,7 +78,28 @@
               </div>
               <small class="text-muted">
                 Assigned by the Project Coordinator.
+                Contact them if this is incorrect.
               </small>
+              {% elif supervisors %}
+              <!-- Has supervisor list but not assigned — allow selection -->
+              <select name="supervisor" class="form-select" required>
+                <option value="">— Select your supervisor —</option>
+                {% for sup in supervisors %}
+                <option value="{{ sup }}">{{ sup }}</option>
+                {% endfor %}
+              </select>
+              <small class="text-warning">
+                ⚠️ You have not been assigned a supervisor yet.
+                Select from the list or contact the coordinator.
+              </small>
+              {% else %}
+              <!-- No supervisor list at all — free text -->
+              <input type="text" name="supervisor" class="form-control"
+                     placeholder="Enter supervisor name" required>
+              <small class="text-muted">
+                Contact the Project Coordinator for your supervisor name.
+              </small>
+              {% endif %}
             </div>
 
             <!-- Topic selection -->
@@ -118,7 +150,7 @@
               </thead>
               <tbody>
                 {% for topic in topics %}
-                <td>{{ loop.index }}</td><td class="small">{{ topic }}</td></tr>
+                <tr><td>{{ loop.index }}</td><td>{{ topic }}</td></tr>
                 {% endfor %}
               </tbody>
             </table>

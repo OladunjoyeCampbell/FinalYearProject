@@ -8,7 +8,7 @@
     <h2 class="mb-4 text-center">Available Final Year Project Topics</h2>
     
     {% if programme %}
-        <!-- Logged in user (student) sees only their programme's topics -->
+        <!-- Logged in user sees only their programme's topics -->
         <div class="card mb-4">
             <div class="card-header bg-primary text-white">
                 {{ programme }} Topics
@@ -26,7 +26,7 @@
             </div>
         </div>
     {% else %}
-        <!-- Staff (supervisor/coordinator) see all programmes' topics -->
+        <!-- Non-logged in users see all programmes' topics -->
         <ul class="nav nav-tabs mb-4" id="topicTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="hnd-swd-tab" data-bs-toggle="tab" 
@@ -100,9 +100,7 @@
         {% if session.logged_in %}
             <a href="{{ url_for('submit_topic') }}" class="btn btn-primary btn-lg">Submit a Topic</a>
         {% else %}
-            <div class="alert alert-secondary">
-                <i class="bi bi-info-circle"></i> You are viewing available topics. Only students can submit topics.
-            </div>
+            <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg">Login to Submit a Topic</a>
         {% endif %}
         <a href="{{ url_for('home') }}" class="btn btn-outline-secondary btn-lg">Back to Home</a>
     </div>
