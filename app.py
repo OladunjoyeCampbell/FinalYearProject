@@ -364,15 +364,10 @@ def coordinator_login():
 def staff_login():
     if request.method == 'POST':
         ph = request.form.get('passphrase', '').strip()
-        coord_ph = get_coordinator_passphrase()
         if not ph:
             flash('Please enter a passphrase.', 'danger')
         else:
-            if coord_ph and ph == coord_ph:
-                session.clear()
-                session['role'] = 'coordinator'
-                flash('Welcome, Project Coordinator.', 'success')
-                return redirect(url_for('view_registered'))
+            # Only check against supervisor passphrases
             sup_name = verify_supervisor(ph)
             if sup_name:
                 session.clear()
