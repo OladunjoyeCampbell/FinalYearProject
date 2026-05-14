@@ -38,7 +38,6 @@
             <li class="nav-item">
               <a class="nav-link" href="{{ url_for('admin_edit_student') }}">Edit Student</a>
             </li>
-            <!-- REMOVED: Fix Sessions and Fill Dates (redundant) -->
             <li class="nav-item">
               <a class="nav-link" href="{{ url_for('admin_review_proposals') }}">Proposals</a>
             </li>
@@ -47,6 +46,10 @@
             </li>
             <li class="nav-item">
               <a class="nav-link" href="{{ url_for('accepted_topics') }}">✅ Accepted Topics (Panel)</a>
+            </li>
+            <!-- View Topics added for coordinator -->
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('view_topics') }}">View Topics</a>
             </li>
             <li class="nav-item">
               <a class="nav-link" href="{{ url_for('admin_settings') }}">⚙️ Settings</a>
@@ -62,6 +65,10 @@
             </li>
             <li class="nav-item">
               <a class="nav-link" href="{{ url_for('supervisor_propose_topic') }}">Propose Topic</a>
+            </li>
+            <!-- View Topics added for supervisor -->
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('view_topics') }}">View Topics</a>
             </li>
             <li class="nav-item">
               <a class="nav-link" href="{{ url_for('supervisor_clear_student_route') }}">✅ Clear Students</a>
@@ -85,7 +92,7 @@
               <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
             </li>
 
-          {# ── Guest (not logged in) — original links + coordinator login ── #}
+          {# ── Guest (not logged in) – removed View Topics link ── #}
           {% else %}
             <li class="nav-item">
               <a class="nav-link" href="{{ url_for('login') }}">Student Login</a>
@@ -95,9 +102,6 @@
             </li>
             <li class="nav-item">
               <a class="nav-link" href="{{ url_for('forgot_password') }}">Forgot Password?</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('view_topics') }}">View Topics</a>
             </li>
             <li class="nav-item">
               <a class="nav-link" href="{{ url_for('staff_login') }}">Supervisor Login</a>

@@ -306,12 +306,18 @@ def submit_topic():
 # ── View Available Topics ─────────────────────────────────────────────────────
 @app.route('/view-topics')
 def view_topics():
+    # Allow only logged-in students or staff
+    if not (session.get('logged_in') or session.get('role')):
+        flash('Please log in to view available topics.', 'warning')
+        return redirect(url_for('login'))
+    
     prog = session.get('programme')
     if prog:
         topics = get_available_topics(prog)
     else:
         topics = {p: get_available_topics(p) for p in PROGRAMMES}
     return render_template('view_topics.html', topics=topics, programme=prog)
+
 
 # ── Coordinator Login ─────────────────────────────────────────────────────────
 @app.route('/coordinator-login', methods=['GET', 'POST'])
