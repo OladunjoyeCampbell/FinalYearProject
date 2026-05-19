@@ -1,16 +1,30 @@
 import os
 import json
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load environment variables FIRST (before any module that uses them)
+load_dotenv()
+
+# Then import Flask and other dependencies
 from flask import (
     Flask, render_template, request, redirect,
     url_for, flash, session, get_flashed_messages
 )
 from functools import wraps
-from dotenv import load_dotenv
 from google.cloud import secretmanager
 from werkzeug.security import generate_password_hash
 
-load_dotenv()
+# Now import modules that may rely on environment variables
+from email_notify import (
+    notify_supervisor_topic_submitted,
+    notify_supervisor_topic_dropped,
+    notify_student_cleared,
+    notify_coordinator_cleared,
+    notify_coordinator_proposal_submitted  
+)
+
+from sheet import get_supervisor_email, get_student_email, get_student_name
 
 app = Flask(__name__)
 
@@ -274,6 +288,7 @@ def logout():
     return redirect(url_for('login'))
 
 # ── Submit Topic ──────────────────────────────────────────────────────────────
+
 @app.route('/submit-topic', methods=['GET', 'POST'])
 @login_required
 def submit_topic():
@@ -316,6 +331,14 @@ def submit_topic():
         elif register_topic(name, m, prog, t, sup):
             flash('Topic registered successfully!', 'success')
             session['just_registered'] = True
+            # ── Email notification to supervisor ──────────────────────────
+            try:
+                supervisor_email = get_supervisor_email(sup)
+                if supervisor_email:
+                    notify_supervisor_topic_submitted(name, m, t, supervisor_email, sup)
+            except Exception as e:
+                # Log error but do not break the user experience
+                app.logger.warning(f"Email notification failed: {e}")
             return redirect(url_for('submit_topic'))
         else:
             flash('Topic unavailable or already taken. Please choose another.', 'danger')
@@ -534,13 +557,19 @@ def supervisor_propose_topic():
         else:
             ok = submit_topic_proposal(proposer, proposal_type, programme, new_topic, student_matric, note)
             if ok:
+                # Send email notification to coordinator
+                try:
+                    from email_notify import notify_coordinator_proposal_submitted
+                    notify_coordinator_proposal_submitted(proposer, proposal_type, new_topic, student_matric)
+                except Exception as e:
+                    app.logger.warning(f"Coordinator email notification failed: {e}")
                 flash('Proposal submitted — awaiting Project Coordinator approval.', 'success')
             else:
                 flash('Failed to submit proposal. Try again.', 'danger')
         return redirect(url_for('supervisor_propose_topic'))
 
     # ── GET: build student list based on role ──────────────────────────────
-    all_registered = get_taken_topics()   # all students with registered topics (current session)
+    all_registered = get_taken_topics()
     programmes = PROGRAMMES
     pending = get_topic_proposals(status='Pending') if role == 'coordinator' else []
     default_proposer = supervisor_name if role == 'supervisor' else 'Project Coordinator'
@@ -548,7 +577,6 @@ def supervisor_propose_topic():
     if role == 'coordinator':
         students = sorted(all_registered, key=lambda r: r.get('Student Name','').lower())
     else:
-        # Supervisor: only show students assigned to them
         assigned_matrics = get_students_for_supervisor(supervisor_name)
         students = sorted(
             [s for s in all_registered if s.get('Matric Number', '').strip() in assigned_matrics],
@@ -582,7 +610,15 @@ def admin_decide_proposal():
     if not proposal_id or decision not in ('Approved', 'Rejected'):
         flash('Invalid request.', 'danger')
         return redirect(url_for('admin_review_proposals'))
-    ok, msg = decide_topic_proposal(proposal_id, decision)
+    
+    # Call the updated decide_topic_proposal that returns extra details
+    ok, msg, proposer_name, proposer_email, proposal_type, new_topic = decide_topic_proposal(proposal_id, decision)
+    
+    # Send email to proposer if decision was made and email exists
+    if ok and proposer_email:
+        from email_notify import notify_proposer_decision
+        notify_proposer_decision(proposer_email, proposer_name, proposal_type, new_topic, decision)
+    
     flash(msg, 'success' if ok else 'warning')
     return redirect(url_for('admin_review_proposals'))
 
@@ -632,59 +668,69 @@ DEFAULT_PRESENTATION_FEE = 2000
 def supervisor_clear_student_route():
     role = session.get('role', '')
     if request.method == 'POST':
-        action = request.form.get('action','').strip()
-        matric = request.form.get('matric','').strip()
-        # For supervisors, we ignore the form's cleared_by and use session name.
-        # For coordinators, we use form value or default.
+        action = request.form.get('action', '').strip()
+        matric = request.form.get('matric', '').strip()
+        
+        # Determine who is clearing the student
         if role == 'supervisor':
             cleared_by = session.get('supervisor_name', '')
         else:
             cleared_by = request.form.get('cleared_by', 'Project Coordinator').strip()
             if not cleared_by:
                 cleared_by = 'Project Coordinator'
+        
         if not matric:
             flash('No student selected.', 'danger')
         elif action == 'clear':
             if not cleared_by:
-                # This should not happen for supervisors, but keep fallback
                 cleared_by = session.get('supervisor_name', 'Unknown')
             ensure_presentation_record(matric)
             ok, msg = supervisor_clear_student(matric, cleared_by)
+            if ok:
+                # Notify student
+                student_email = get_student_email(matric)
+                if student_email:
+                    student_name = get_student_name(matric)
+                    if student_name:
+                        notify_student_cleared(student_email, student_name, cleared_by)
+                # Notify coordinator
+                student_name = get_student_name(matric)
+                if student_name:
+                    notify_coordinator_cleared(student_name, matric, cleared_by)
             flash(msg, 'success' if ok else 'warning')
         elif action == 'unclear':
             ok, msg = coordinator_unclear_student(matric)
             flash(msg, 'success' if ok else 'warning')
         elif action == 'pay' and role == 'coordinator':
             fee = get_presentation_fee()
-            ok, msg = record_payment(matric, fee, cleared_by)  # use same cleared_by name
+            ok, msg = record_payment(matric, fee, cleared_by)
             flash(msg, 'success' if ok else 'warning')
         elif action == 'unpay' and role == 'coordinator':
             ok, msg = reverse_payment(matric)
             flash(msg, 'success' if ok else 'warning')
         return redirect(url_for('supervisor_clear_student_route'))
 
+    # GET request: build student list
     all_registered = get_taken_topics()
     assignments = get_all_assignments()
-    assignment_map = {a.get("Matric Number","").strip().lower(): a.get("Supervisor","").strip() for a in assignments}
+    assignment_map = {a.get("Matric Number", "").strip().lower(): a.get("Supervisor", "").strip() for a in assignments}
+    
     if role == 'coordinator':
-        students = sorted(all_registered, key=lambda r: r.get('Student Name','').lower())
+        students = sorted(all_registered, key=lambda r: r.get('Student Name', '').lower())
         my_name = 'Project Coordinator'
     else:
-        sup_name = session.get('supervisor_name','')
+        sup_name = session.get('supervisor_name', '')
         sup_key = sup_name.lower()
-        assigned_matrics = {a.get("Matric Number","").strip().lower() for a in assignments if a.get("Supervisor","").strip().lower() == sup_key}
-        students = sorted([s for s in all_registered if s.get('Matric Number','').strip().lower() in assigned_matrics],
-                          key=lambda r: r.get('Student Name','').lower())
+        assigned_matrics = {a.get("Matric Number", "").strip().lower() for a in assignments if a.get("Supervisor", "").strip().lower() == sup_key}
+        students = sorted([s for s in all_registered if s.get('Matric Number', '').strip().lower() in assigned_matrics],
+                          key=lambda r: r.get('Student Name', '').lower())
         my_name = sup_name
-
-    # IMPORTANT: Removed the loop that called ensure_presentation_record for every student
-    # Presentation rows are created on-demand when clearing or via coordinator sync.
 
     pres_records = {r['Matric Number'].strip().lower(): r for r in get_presentation_records(CURRENT_SESSION)}
     return render_template('supervisor_clear_student.html', students=students,
                            pres_records=pres_records, assignment_map=assignment_map,
                            current_session=CURRENT_SESSION, is_coordinator=(role == 'coordinator'),
-                           supervisor_name=session.get('supervisor_name',''),
+                           supervisor_name=session.get('supervisor_name', ''),
                            default_name=my_name, presentation_fee=get_presentation_fee())
 
 # ── Coordinator: Manage presentations ──────────────────────────────────────────
