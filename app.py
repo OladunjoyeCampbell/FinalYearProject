@@ -21,12 +21,79 @@ from email_notify import (
     notify_supervisor_topic_dropped,
     notify_student_cleared,
     notify_coordinator_cleared,
-    notify_coordinator_proposal_submitted  
+    notify_coordinator_proposal_submitted,
+    notify_proposer_decision
 )
 
 from sheet import get_supervisor_email, get_student_email, get_student_name
+from sheet import (
+    CURRENT_SESSION,
+    PREVIOUS_SESSION,
+    backfill_sessions,
+    update_student_session,
+    edit_student_record,
+    backfill_submission_dates,
+    submit_topic_proposal,
+    get_presentation_records,
+    supervisor_clear_student,
+    coordinator_unclear_student,
+    record_payment,
+    reverse_payment,
+    sync_presentations_from_registered,
+    ensure_presentation_record,
+    invalidate_cache,
+    verify_supervisor,
+    get_assigned_supervisor,
+    get_students_for_supervisor,
+    assign_supervisor,
+    bulk_assign_supervisors,
+    get_all_assignments,
+    set_supervisor_passphrase,
+    delete_student_record,
+    sync_all_assignments,
+    clean_presentations_sheet,
+    get_all_registered_students,
+    lookup_student_in_master,
+    student_exists_v2,
+    register_student_v2,
+    verify_student_v2,
+    update_student_password,
+    migrate_students_sheet,
+    is_portal_open,
+    get_portal_message,
+    get_presentation_fee,
+    get_setting,
+    set_setting,
+    get_supervisors,
+    get_supervisor_names,
+    add_supervisor,
+    update_supervisor_status,
+    get_topic_proposals,
+    decide_topic_proposal,
+    get_available_topics,
+    get_taken_topics,
+    get_taken_topics_by_session,
+    register_topic,
+    is_student_registered,
+    drop_registered_topic,
+    find_student_record,
+    set_panel_accepted,
+    # Password reset functions
+    create_password_reset_token,
+    verify_reset_token,
+    delete_reset_token,
+    get_student_email_by_matric
+
+)
+
+PROGRAMMES = [
+    'HND Software & Web Development',
+    'HND Networking & Cloud Computing',
+    'ND Computer Science',
+]
 
 app = Flask(__name__)
+
 
 # ── SECRET_KEY ────────────────────────────────────────────────────────────────
 def get_secret_key():
@@ -461,42 +528,105 @@ def drop_topic():
         flash('Programme information missing. Please contact support.', 'danger')
         return redirect(url_for('submit_topic'))
     
-    if drop_registered_topic(m, prog):
+    success, topic_title = drop_registered_topic(m, prog)
+    if success:
         flash('Topic dropped successfully.', 'success')
+        # Send email to supervisor
+        supervisor_name = session.get('supervisor')
+        if supervisor_name:
+            supervisor_email = get_supervisor_email(supervisor_name)
+            if supervisor_email and topic_title:
+                student_name = session.get('student_name')
+                notify_supervisor_topic_dropped(student_name, m, topic_title, supervisor_email, supervisor_name)
     else:
         flash('Could not drop topic. Please try again.', 'danger')
     return redirect(url_for('submit_topic'))
+
 
 # ── Forgot Password ───────────────────────────────────────────────────────────
 @app.route('/forgot-password', methods=['GET', 'POST'])
 @app.route('/forgot_password', methods=['GET', 'POST'])
 def forgot_password():
     if request.method == 'POST':
-        m = request.form.get('matric_number','').strip().upper()
-        npw = request.form.get('new_password','')
-        cf = request.form.get('confirm_password','')
-        if not all([m, npw, cf]):
+        m = request.form.get('matric_number', '').strip().upper()
+        if not m:
+            flash('Please enter your matric number.', 'danger')
+            return redirect(url_for('forgot_password'))
+        
+        # Check if matric exists in master sheet
+        identity = lookup_student_in_master(m)
+        if not identity:
+            flash('Matric number not found in the graduating students list.', 'danger')
+            return redirect(url_for('forgot_password'))
+        
+        # Check if student has an account
+        if not student_exists_v2(m):
+            flash('No portal account found for this matric number. Please register first.', 'warning')
+            return redirect(url_for('register'))
+        
+        # Get student email
+        student_email = get_student_email_by_matric(m)
+        if not student_email:
+            flash('We do not have an email address for you. Please contact the coordinator.', 'danger')
+            return redirect(url_for('forgot_password'))
+        
+        # Generate a reset token
+        token = create_password_reset_token(m)
+        reset_link = url_for('reset_password', token=token, _external=True)
+        
+        # Send email using Resend (reuse existing send_email function)
+        from email_notify import send_email
+        subject = "Password Reset Request"
+        html = f"""
+        <h3>Password Reset</h3>
+        <p>Hello {identity.get('Student Name', 'Student')},</p>
+        <p>You requested to reset your password for the Final Year Project Portal.</p>
+        <p>Click the link below to set a new password. This link will expire in 30 minutes.</p>
+        <p><a href="{reset_link}">Reset Password</a></p>
+        <p>If you did not request this, please ignore this email.</p>
+        <hr>
+        <small>Project Portal – Department of Computer Science, Niger State Polytechnic</small>
+        """
+        if send_email(student_email, subject, html):
+            flash('A password reset link has been sent to your registered email address.', 'success')
+        else:
+            flash('Could not send password reset email. Please try again later.', 'danger')
+        return redirect(url_for('login'))
+    
+    return render_template('forgot_password.html')
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    # Verify token (without deleting)
+    matric = verify_reset_token(token)
+    if not matric:
+        flash('The password reset link is invalid or has expired. Please request a new one.', 'danger')
+        return redirect(url_for('forgot_password'))
+    
+    if request.method == 'POST':
+        npw = request.form.get('new_password', '')
+        cf = request.form.get('confirm_password', '')
+        if not npw or not cf:
             flash('All fields are required.', 'danger')
         elif npw != cf:
             flash('Passwords do not match.', 'danger')
         elif len(npw) < 6:
             flash('Password must be at least 6 characters.', 'danger')
         else:
-            identity = lookup_student_in_master(m)
-            if not identity:
-                flash('Matric number not found in graduating students list.', 'danger')
-            elif not student_exists_v2(m):
-                flash('No portal account found. Please register first.', 'warning')
-                return redirect(url_for('register'))
+            hashed = generate_password_hash(npw, method='scrypt')
+            if update_student_password(matric, hashed):
+                # Delete the token now that password is changed
+                delete_reset_token(token)
+                flash('Password updated successfully. Please log in.', 'success')
+                return redirect(url_for('login'))
             else:
-                hashed = generate_password_hash(npw, method='scrypt')
-                if update_student_password(m, hashed):
-                    flash('Password updated — please log in.', 'success')
-                    return redirect(url_for('login'))
-                else:
-                    flash('Could not update password. Please try again.', 'danger')
-        return redirect(url_for('forgot_password'))
-    return render_template('forgot_password.html')
+                flash('Could not update password. Please try again.', 'danger')
+        return render_template('reset_password.html', token=token)
+    
+    # GET: display the form
+    return render_template('reset_password.html', token=token)
+
+
 
 # ── Coordinator: Edit a student record ───────────────────────────────────────
 @app.route('/admin/edit-student', methods=['GET', 'POST'])

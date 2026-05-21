@@ -1,5 +1,6 @@
 import os
 import json
+import secrets
 import gspread
 import logging
 from datetime import datetime
@@ -249,7 +250,7 @@ def _init_sheets():
     if "Supervisors" in all_ws:
         _supervisors_sheet = all_ws["Supervisors"]
     else:
-        _supervisors_sheet = _spreadsheet.add_worksheet("Supervisors", rows=100, cols=5)
+        _supervisors_sheet = _spreadsheet.add_worksheet("Supervisors", rows=100, cols=6)  # added Email column
         _supervisors_sheet.append_row(SUPERVISORS_HEADERS)
     # AssignedSupervisors
     if "AssignedSupervisors" in all_ws:
@@ -392,8 +393,6 @@ def register_topic(student_name, matric_number, programme, topic_title, supervis
     logger.info(f"Topic '{matched_title}' registered for {matric_number}")
     return True
 
-
-# Modify drop_registered_topic to return (success, topic_title)
 def drop_registered_topic(matric_number, programme):
     taken_sheet = _get_taken_sheet()
     key = matric_number.strip().lower()
@@ -600,7 +599,6 @@ def update_student_password(matric, new_hash):
         logger.error(f"update_student_password error: {e}")
     return False
 
-
 def get_student_email(matric):
     """Return student email from Students sheet."""
     _init_sheets()
@@ -623,8 +621,88 @@ def get_student_email(matric):
         logger.error(f"get_student_email error: {e}")
     return None
 
+# Password reset token functions
+
+PASSWORD_RESET_SHEET = "PasswordResetTokens"
+
+def create_password_reset_token(matric):
+    """Create a one-time token for password reset and store it in the sheet."""
+    import secrets
+    token = secrets.token_urlsafe(32)
+    expiry = datetime.now().timestamp() + 1800  # 30 minutes from now
+    
+    _init_sheets()   # important!
+    try:
+        ws = _spreadsheet.worksheet(PASSWORD_RESET_SHEET)
+    except gspread.exceptions.WorksheetNotFound:
+        ws = _spreadsheet.add_worksheet(PASSWORD_RESET_SHEET, rows=100, cols=3)
+        ws.append_row(["token", "matric", "expiry"])
+    
+    ws.append_row([token, matric, expiry])
+    logger.info(f"Password reset token created for {matric}")
+    return token
+
+def verify_reset_token(token):
+    """Return matric if token is valid and not expired, else None. Does NOT delete."""
+    _init_sheets()
+    try:
+        ws = _spreadsheet.worksheet(PASSWORD_RESET_SHEET)
+        records = ws.get_all_records()
+        for rec in records:
+            if rec.get("token") == token:
+                expiry = float(rec.get("expiry", 0))
+                if datetime.now().timestamp() < expiry:
+                    matric = rec.get("matric")
+                    logger.info(f"Valid token for {matric}")
+                    return matric
+                else:
+                    logger.info(f"Expired token for {rec.get('matric')}")
+                    # Optionally delete expired tokens here, but not necessary
+                    return None
+    except Exception as e:
+        logger.error(f"verify_reset_token error: {e}")
+    return None
+
+def delete_reset_token(token):
+    """Remove the token from the sheet (after successful password reset)."""
+    _init_sheets()
+    try:
+        ws = _spreadsheet.worksheet(PASSWORD_RESET_SHEET)
+        all_rows = ws.get_all_values()
+        for idx, row in enumerate(all_rows, start=1):
+            if len(row) > 0 and row[0] == token:
+                ws.delete_rows(idx)
+                logger.info(f"Deleted token {token}")
+                return True
+    except Exception as e:
+        logger.error(f"delete_reset_token error: {e}")
+    return False
+
+
+def get_student_email_by_matric(matric):
+    """Get student email from Students sheet using matric number."""
+    _init_sheets()
+    if not _students_sheet:
+        return None
+    key = matric.strip().lower()
+    try:
+        all_rows = _students_sheet.get_all_values()
+        if len(all_rows) < 2:
+            return None
+        header = [h.strip() for h in all_rows[0]]
+        m_idx = next((i for i, h in enumerate(header) if 'matric' in h.lower()), None)
+        e_idx = next((i for i, h in enumerate(header) if 'email' in h.lower()), None)
+        if m_idx is None or e_idx is None:
+            return None
+        for row in all_rows[1:]:
+            if len(row) > m_idx and row[m_idx].strip().lower() == key:
+                return row[e_idx].strip()
+    except Exception as e:
+        logger.error(f"get_student_email_by_matric error: {e}")
+    return None
+
 def get_student_name(matric):
-    """Return student name from Students sheet (or AssignedSupervisors)."""
+    """Return student name from AssignedSupervisors sheet."""
     identity = lookup_student_in_master(matric)
     return identity.get("Student Name", "") if identity else ""
 
@@ -1058,7 +1136,58 @@ def verify_supervisor(passphrase):
         logger.error(f"verify_supervisor error: {e}")
     return None
 
+def get_supervisor_email(supervisor_name):
+    """Return the email address of a supervisor by their full name."""
+    ws = _get_supervisors_sheet()
+    if not ws:
+        return None
+    try:
+        records = ws.get_all_records()
+        for rec in records:
+            if rec.get("Full Name", "").strip().lower() == supervisor_name.strip().lower():
+                return rec.get("Email", "").strip()
+    except Exception as e:
+        logger.error(f"get_supervisor_email error: {e}")
+    return None
+
+# Alias for consistency
+get_supervisor_email_by_name = get_supervisor_email
+
 # ------------------------------------------------------------
+# Proposals
+def _get_proposals_sheet():
+    _init_sheets()
+    try:
+        return _spreadsheet.worksheet('Proposals')
+    except Exception:
+        ws = _spreadsheet.add_worksheet('Proposals', rows=500, cols=9)
+        ws.append_row(['ID', 'Proposer', 'Type', 'Programme', 'New Topic', 'Student Matric', 'Note', 'Status', 'Submitted At'])
+        logger.info("Created Proposals sheet")
+        return ws
+
+def submit_topic_proposal(proposer, proposal_type, programme, new_topic, student_matric='', note=''):
+    try:
+        ws = _get_proposals_sheet()
+        all_rows = ws.get_all_values()
+        proposal_id = str(len(all_rows))
+        ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        ws.append_row([proposal_id, proposer, proposal_type, programme, new_topic, student_matric, note, 'Pending', ts])
+        logger.info(f"Proposal #{proposal_id} submitted by {proposer}")
+        return True
+    except Exception as e:
+        logger.error(f"submit_topic_proposal error: {e}")
+        return False
+
+def get_topic_proposals(status=None):
+    try:
+        ws = _get_proposals_sheet()
+        rows = ws.get_all_records()
+        if status:
+            rows = [r for r in rows if r.get('Status', '') == status]
+        return rows
+    except Exception as e:
+        logger.error(f"get_topic_proposals error: {e}")
+        return []
 
 def decide_topic_proposal(proposal_id, decision):
     try:
@@ -1134,24 +1263,6 @@ def decide_topic_proposal(proposal_id, decision):
         return False, str(e), None, None, None, None
 
 # ------------------------------------------------------------
-def get_supervisor_email(supervisor_name):
-    """Return the email address of a supervisor by their full name."""
-    ws = _get_supervisors_sheet()
-    if not ws:
-        return None
-    try:
-        records = ws.get_all_records()
-        for rec in records:
-            if rec.get("Full Name", "").strip().lower() == supervisor_name.strip().lower():
-                return rec.get("Email", "").strip()
-    except Exception as e:
-        logger.error(f"get_supervisor_email error: {e}")
-    return None
-
-# Alias for consistency with decide_topic_proposal
-get_supervisor_email_by_name = get_supervisor_email
-
-
 # Assignments
 def _get_assignments_sheet():
     _init_sheets()
@@ -1333,112 +1444,3 @@ def append_log_entry(row):
         except Exception as e:
             logger.error(f"append_log_entry error: {e}")
     return False
-
-# ------------------------------------------------------------
-# Proposals
-def _get_proposals_sheet():
-    _init_sheets()
-    try:
-        return _spreadsheet.worksheet('Proposals')
-    except Exception:
-        ws = _spreadsheet.add_worksheet('Proposals', rows=500, cols=9)
-        ws.append_row(['ID', 'Proposer', 'Type', 'Programme', 'New Topic', 'Student Matric', 'Note', 'Status', 'Submitted At'])
-        logger.info("Created Proposals sheet")
-        return ws
-
-def submit_topic_proposal(proposer, proposal_type, programme, new_topic, student_matric='', note=''):
-    try:
-        ws = _get_proposals_sheet()
-        all_rows = ws.get_all_values()
-        proposal_id = str(len(all_rows))
-        ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        ws.append_row([proposal_id, proposer, proposal_type, programme, new_topic, student_matric, note, 'Pending', ts])
-        logger.info(f"Proposal #{proposal_id} submitted by {proposer}")
-        return True
-    except Exception as e:
-        logger.error(f"submit_topic_proposal error: {e}")
-        return False
-
-def get_topic_proposals(status=None):
-    try:
-        ws = _get_proposals_sheet()
-        rows = ws.get_all_records()
-        if status:
-            rows = [r for r in rows if r.get('Status', '') == status]
-        return rows
-    except Exception as e:
-        logger.error(f"get_topic_proposals error: {e}")
-        return []
-
-def decide_topic_proposal(proposal_id, decision):
-    try:
-        ws = _get_proposals_sheet()
-        all_rows = ws.get_all_values()
-        if len(all_rows) < 2:
-            return False, "Proposals sheet is empty.", None, None, None, None
-        header = [h.strip() for h in all_rows[0]]
-        try:
-            id_idx = header.index('ID')
-            status_idx = header.index('Status') + 1
-            type_idx = header.index('Type')
-            prog_idx = header.index('Programme')
-            topic_idx = header.index('New Topic')
-            matric_idx = header.index('Student Matric')
-            proposer_idx = header.index('Proposer')   # important: get proposer column
-        except ValueError as e:
-            return False, f"Proposals sheet missing column: {e}", None, None, None, None
-        
-        for row_idx, row in enumerate(all_rows[1:], start=2):
-            if row[id_idx].strip() != str(proposal_id).strip():
-                continue
-            
-            proposer_name = row[proposer_idx].strip() if proposer_idx < len(row) else ""
-            proposal_type = row[type_idx].strip()
-            new_topic = row[topic_idx].strip()
-            
-            # Get proposer email from Supervisors sheet
-            proposer_email = get_supervisor_email_by_name(proposer_name) if proposer_name else None
-            
-            # Update status
-            ws.update_cell(row_idx, status_idx, decision)
-            logger.info(f"Proposal #{proposal_id} → {decision}")
-            
-            if decision != 'Approved':
-                return True, f"Proposal #{proposal_id} rejected.", proposer_name, proposer_email, proposal_type, new_topic
-            
-            # Process approval
-            programme = row[prog_idx].strip()
-            student_matric = row[matric_idx].strip()
-            
-            if proposal_type == 'New Topic':
-                ws_avail = _available_sheets.get(programme)
-                if not ws_avail:
-                    return False, f"No available topics sheet for '{programme}'.", proposer_name, proposer_email, proposal_type, new_topic
-                ws_avail.append_row([new_topic, CURRENT_SESSION])
-                return True, f"Topic added to {programme} pool.", proposer_name, proposer_email, proposal_type, new_topic
-            
-            elif proposal_type == 'Topic Change':
-                taken_sheet = _get_taken_sheet()
-                all_taken = taken_sheet.get_all_values()
-                if len(all_taken) < 2:
-                    return False, "TakenTopics empty.", proposer_name, proposer_email, proposal_type, new_topic
-                taken_header = [h.strip() for h in all_taken[0]]
-                m_col = taken_header.index("Matric Number")
-                t_col = taken_header.index("Topic Title")
-                updated = False
-                for taken_idx, taken_row in enumerate(all_taken[1:], start=2):
-                    if taken_row[m_col].strip().lower() == student_matric.strip().lower():
-                        taken_sheet.update_cell(taken_idx, t_col+1, new_topic)
-                        updated = True
-                        break
-                if not updated:
-                    return False, f"Student {student_matric} not found in TakenTopics.", proposer_name, proposer_email, proposal_type, new_topic
-                return True, f"Topic updated for {student_matric}.", proposer_name, proposer_email, proposal_type, new_topic
-            
-            else:
-                return False, f"Unknown type: {proposal_type}", proposer_name, proposer_email, proposal_type, new_topic
-        
-        return False, f"Proposal #{proposal_id} not found.", None, None, None, None
-    except Exception as e:
-        logger.error(f"decide_topic_proposal error: {e}")
-        return False, str(e), None, None, None, None
