@@ -18,10 +18,16 @@
           {% endwith %}
 
           <form method="POST">
-            <div class="mb-3">
+            <div class="mb-3 position-relative">
               <label class="form-label fw-bold">Coordinator Passphrase</label>
-              <input type="password" name="passphrase" class="form-control"
-                     placeholder="Enter coordinator passphrase" autofocus required>
+              <div class="input-group">
+                <input type="password" name="passphrase" id="passphrase" class="form-control"
+                       placeholder="Enter coordinator passphrase" autofocus required>
+                <button type="button" class="btn btn-outline-secondary toggle-password" 
+                        data-target="passphrase" style="border-top-left-radius:0; border-bottom-left-radius:0;">
+                  <i class="bi bi-eye-slash"></i>
+                </button>
+              </div>
             </div>
             <button type="submit" class="btn btn-dark w-100">Login as Coordinator</button>
           </form>
@@ -38,4 +44,24 @@
     </div>
   </div>
 </div>
+
+<script>
+  // Toggle password visibility for all .toggle-password buttons
+  document.querySelectorAll('.toggle-password').forEach(button => {
+    button.addEventListener('click', function() {
+      const targetId = this.getAttribute('data-target');
+      const input = document.getElementById(targetId);
+      const icon = this.querySelector('i');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('bi-eye-slash');
+        icon.classList.add('bi-eye');
+      } else {
+        input.type = 'password';
+        icon.classList.remove('bi-eye');
+        icon.classList.add('bi-eye-slash');
+      }
+    });
+  });
+</script>
 {% endblock %}

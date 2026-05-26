@@ -441,6 +441,22 @@ def get_taken_topics_by_session(session=None):
     except gspread.exceptions.WorksheetNotFound:
         return []
 
+def get_all_past_taken_topics():
+    """Return a dict mapping session label to list of topic records for all past sessions."""
+    _init_sheets()
+    past_sessions = {}
+    current_tab_name = f"TakenTopics_{CURRENT_SESSION.replace('/', '_')}"
+    for ws in _spreadsheet.worksheets():
+        title = ws.title
+        if title.startswith("TakenTopics_") and title != current_tab_name:
+            # Extract session string from tab name (e.g., "TakenTopics_2024_2025" -> "2024/2025")
+            session_str = title.replace("TakenTopics_", "").replace("_", "/")
+            records = ws.get_all_records()
+            if records:
+                past_sessions[session_str] = records
+    return past_sessions
+
+
 def update_student_session(matric_number, new_session):
     if new_session != CURRENT_SESSION:
         return False

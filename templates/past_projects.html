@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Past Projects{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h4 class="mb-4">📚 Past Final Year Projects</h4>
+    <p class="text-muted">Browse projects from previous academic sessions (read‑only).</p>
+
+    {% for session, topics in past_data.items() %}
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header bg-secondary text-white">
+                <strong>{{ session }}</strong> ({{ topics|length }} projects)
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>#</th>
+                                <th>Student Name</th>
+                                <th>Matric No.</th>
+                                <th>Programme</th>
+                                <th>Topic Title</th>
+                                <th>Supervisor</th>
+                             </tr>
+                        </thead>
+                        <tbody>
+                            {% for rec in topics %}
+                             <tr>
+                                <td>{{ loop.index }}</td>
+                                <td>{{ rec.get('Student Name', '') }}</td>
+                                <td><code>{{ rec.get('Matric Number', '') }}</code></td>
+                                <td>{{ rec.get('Programme', '') }}</td>
+                                <td>{{ rec.get('Topic Title', '') }}</td>
+                                <td>{{ rec.get('Supervisor', '') }}</td>
+                             </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-info">No past projects found.</div>
+    {% endfor %}
+
+    <div class="mt-3">
+        <a href="{{ url_for('home') }}" class="btn btn-outline-secondary">← Back to Home</a>
+    </div>
+</div>
+{% endblock %}

@@ -82,7 +82,8 @@ from sheet import (
     create_password_reset_token,
     verify_reset_token,
     delete_reset_token,
-    get_student_email_by_matric
+    get_student_email_by_matric,
+    get_all_past_taken_topics,
 
 )
 
@@ -541,6 +542,12 @@ def drop_topic():
     else:
         flash('Could not drop topic. Please try again.', 'danger')
     return redirect(url_for('submit_topic'))
+
+@app.route('/past-projects')
+def past_projects():
+    """Public view of all past projects (no login required)."""
+    past_data = get_all_past_taken_topics()
+    return render_template('past_projects.html', past_data=past_data, programmes=PROGRAMMES)
 
 
 # ── Forgot Password ───────────────────────────────────────────────────────────
